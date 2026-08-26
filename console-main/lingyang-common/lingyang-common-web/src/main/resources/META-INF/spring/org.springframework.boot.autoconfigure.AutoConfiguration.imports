@@ -1,0 +1,5 @@
+com.lingyang.common.web.config.MvcConfig
+com.lingyang.common.web.handler.GlobalHttpExceptionHandler
+com.lingyang.common.web.serializer.handler.IdCardPrivacySerializer
+com.lingyang.common.web.serializer.handler.EmailPrivacySerializer
+com.lingyang.common.web.serializer.handler.PhonePrivacySerializer

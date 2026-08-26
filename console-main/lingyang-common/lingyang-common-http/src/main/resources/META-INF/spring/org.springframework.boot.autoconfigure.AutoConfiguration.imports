@@ -1,0 +1,2 @@
+com.lingyang.common.http.config.ForestAutoConfiguration
+com.lingyang.common.http.interceptor.HttpInterceptor
