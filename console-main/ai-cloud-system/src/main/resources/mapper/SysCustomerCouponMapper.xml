@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lingyang.cloud.mapper.SysCustomerCouponMapper">
+
+    <select id="getList" resultType="com.lingyang.cloud.model.vo.customer.SysCustomerCouponListVO">
+        select cc.id,
+        cc.coupon_id,
+        cc.customer_id,
+        cc.status,
+        cc.create_time,
+        cc.use_time_start,
+        cc.use_time_end,
+        c.name,
+        c.type,
+        c.threshold_amount,
+        c.deduction_amount,
+        c.receive_num,
+        c.receive_time_start,
+        c.receive_time_end,
+        c.receive_type,
+        c.count,
+        c.range_type,
+        c.sort,
+        c.coupon_remark
+        from sys_customer_coupon cc
+        join sys_coupon c on cc.coupon_id = c.id
+        <where>
+            and cc.status = 1
+            <if test="id != null">
+                and cc.id = #{id}
+            </if>
+            <if test="couponId != null">
+                and cc.coupon_id = #{couponId}
+            </if>
+            <if test="customerId != null">
+                and cc.customer_id = #{customerId}
+            </if>
+            <if test="couponIds != null and couponIds.size() > 0">
+                and cc.coupon_id in
+                <foreach collection="couponIds" item="couponId" open="(" separator="," close=")">
+                    #{couponId}
+                </foreach>
+            </if>
+            <if test="priceMap != null and priceMap.size() > 0">
+                and (
+                <foreach collection="priceMap.keys" item="k" separator=" or " >
+                  ( c.range_type = ${k} and c.threshold_amount &lt;= ${priceMap[k]} )
+                </foreach>
+                )
+            </if>
+            and cc.use_time_start &lt;= now()
+            and cc.use_time_end &gt; now()
+        </where>
+        order by c.sort, cc.create_time desc
+    </select>
+</mapper>

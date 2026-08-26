@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lingyang.cloud.mapper.SysCustomerEcsWorkMapper">
+
+    <select id="getList" resultType="com.lingyang.cloud.model.dto.SysEcsWorkPageDTO">
+        SELECT
+            t.id,
+            MAX(t.work_no) AS work_no,
+            MAX(t.order_id) AS order_id,
+            MAX(t1.order_no) AS order_no,
+            MAX(t.create_time) AS create_time,
+            MAX(t.update_time) AS update_time,
+            MAX(customer.id) AS userId,
+            MAX(customer.customer_name) AS customerName,
+            MAX(customer.phone) AS phone,
+            MAX(t2.ecs_type) AS ecsTypeEnum,
+            MAX(CASE WHEN t4.id IS NOT NULL THEN 1 ELSE 0 END) AS isAllocatePublicIp,
+            MAX(t2.ecs_scale) AS ecs_scale,
+            MAX(t2.region) AS region,
+            MAX(t2.zone_id) AS `zone`,
+            MAX(t2.memory_size) AS memory_size,
+            MAX(t2.cpu_model) AS cpu_model,
+            MAX(t2.gpu_model) AS gpu_model,
+            MAX(t2.gpu_memory) AS gpu_memory,
+            MAX(t2.image_id) AS image_id,
+            MAX(t2.expire_time) AS expire_time,
+            MAX(t.number) AS quantity,
+            MAX(CASE WHEN t1.order_status = 1 THEN t1.pay_time ELSE NULL END) AS payTime
+            FROM sys_customer_ecs_work t
+            LEFT JOIN sys_order t1 ON t.order_id = t1.id
+            LEFT JOIN sys_customer customer ON t1.create_by_id = customer.id
+            LEFT JOIN sys_customer_instances t2 ON t1.id = t2.order_id
+            LEFT JOIN sys_customer_ece_work_eip t4 ON t4.ecs_work_id = t.id
+            LEFT JOIN sys_customer_vpc t5 ON customer.id = t5.customer_id
+            <where>
+                <if test="param.startDate != null">
+                    and t.create_time &gt;= #{param.startDate}
+                </if>
+                <if test="param.endDate != null">
+                    and t.create_time &lt;= #{param.endDate}
+                </if>
+                <if test="param.customerInfoQueryKey != null and param.customerInfoQueryKey != ''">
+                    and (customer.phone like concat('%',#{param.customerInfoQueryKey},'%') or customer.customer_name like
+                    concat('%',#{param.customerInfoQueryKey},'%'))
+                </if>
+            </where>
+            group by t.id
+        order by t.create_time desc
+    </select>
+    <select id="getDetail" resultType="com.lingyang.cloud.model.dto.SysEcsWorkDetailDTO">
+        select
+            t.id,
+            MAX(t.work_no) AS work_no,
+            MAX(t.order_id) AS order_id,
+            MAX(t1.order_no) AS order_no,
+            MAX(t.create_time) AS create_time,
+            MAX(t.update_time) AS update_time,
+            MAX(customer.id) AS userId,
+            MAX(customer.customer_name) AS customerName,
+            MAX(customer.phone) AS phone,
+            MAX(t2.ecs_type) AS ecsTypeEnum,
+            MAX(CASE WHEN t4.id IS NOT NULL THEN 1 ELSE 0 END) AS isAllocatePublicIp,
+            MAX(t2.ecs_scale) AS ecs_scale,
+            MAX(t2.region) AS region,
+            MAX(t2.zone_id) AS `zone`,
+            MAX(t2.memory_size) AS memory_size,
+            MAX(t2.cpu_model) AS cpu_model,
+            MAX(t2.gpu_model) AS gpu_model,
+            MAX(t2.gpu_memory) AS gpu_memory,
+            MAX(t2.image_id) AS image_id,
+            MAX(t2.expire_time) AS expire_time,
+            MAX(t.number) AS quantity,
+            MAX(CASE WHEN t1.order_status = 1 THEN t1.pay_time ELSE NULL END) AS payTime
+        from sys_customer_ecs_work t
+                 left join sys_order t1 on t.order_id = t1.id
+                 left join sys_customer customer on t1.create_by_id = customer.id
+                 left join sys_customer_instances t2 on t1.id = t2.order_id
+                 left join sys_customer_ece_work_eip t4 on t4.ecs_work_id = t.id
+                 left join sys_customer_vpc t5 on customer.id = t5.customer_id
+        where
+            t.id = #{id}
+        group by t.id
+    </select>
+</mapper>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lingyang.cloud.mapper.SysActiveCouponMapper">
+
+    <select id="getCoupons" resultType="com.lingyang.cloud.model.dto.SysActiveCouponDetailsDTO">
+        SELECT
+            c.id,
+            c.NAME,
+            c.deduction_amount,
+            c.type,
+            c.range_type,
+            c.use_time_start,
+            c.use_time_end,
+            c.`status`,
+            a.type as couponType
+        FROM
+            sys_active_coupon a
+                LEFT JOIN sys_coupon c on a.coupon_id = c.id
+        WHERE
+            a.active_id = #{id}
+    </select>
+</mapper>

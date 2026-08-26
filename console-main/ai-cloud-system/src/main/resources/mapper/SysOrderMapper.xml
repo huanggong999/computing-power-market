@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lingyang.cloud.mapper.SysOrderMapper">
+
+    <select id="getList" resultType="com.lingyang.cloud.entity.SysOrderEntity">
+        select
+        o.id,
+        customer.phone as customer_phone,
+        customer.customer_name,
+        o.order_no,
+        o.order_type,
+        o.original_price,
+        o.premium_price,
+        o.user_discount_amount,
+        o.voucher_id,
+        o.voucher_amount,
+        o.coupon_id,
+        o.coupon_amount,
+        o.final_pay_amount,
+        o.balance_pay_amount,
+        o.online_pay_amount,
+        o.online_pay_type,
+        o.online_pay_serial_number,
+        o.pay_time,
+        o.order_status,
+        o.create_by,
+        o.create_by_id,
+        o.create_time,
+        o.update_by,
+        o.update_by_id,
+        o.update_time,
+        o.rewards_type,
+        o.recharge_name,
+        o.recharge_id,
+        o.rewards_amount,
+        o.rewards_time,
+        o.network_product_id as network_product_id,
+        o.network_day as networkDay,
+        o.network_value_id as networkValueId,
+        t3.is_bandwidth_display,
+        CASE WHEN o.bandwidth_all IS NULL THEN t2.bandwidth ELSE o.bandwidth_all END as bandwidth,
+        CASE WHEN o.network_count_all IS NULL THEN t2.network_count ELSE o.network_count_all END as networkCount,
+        CASE WHEN o.ip_count_all IS NULL THEN t2.ip_count ELSE o.ip_count_all END as ipCount
+
+        from sys_order o
+        left join sys_customer customer on o.create_by_id = customer.id
+        left join sys_customer_ecs_work t on o.id = t.order_id
+        left join sys_network_value t2 on o.network_value_id = t2.id
+        left join sys_network_product t3 on t2.product_id = t3.id
+
+        where o.del_flag = 0
+          <if test="productType != null">
+            and t.id  is null
+        </if>
+          <if test="orderNo != null and orderNo !=''">
+            and o.order_no like concat('%',#{orderNo},'%')
+        </if>
+        <if test="orderId != null">
+            and o.id = #{orderId}
+        </if>
+        <if test="orderType != null and orderType.code != 3">
+            and o.order_type = #{orderType}
+        </if>
+        <if test="orderType != null and orderType.code == 3">
+            and t2.del_flag = 0
+            and o.order_type in (3,4,5)
+        </if>
+        <if test="orderStatus != null">
+            and o.order_status = #{orderStatus}
+        </if>
+        <if test="rechargeId != null">
+            and o.recharge_id = #{rechargeId}
+        </if>
+        <if test="customerId != null">
+            and o.create_by_id = #{customerId}
+        </if>
+        <if test="startTime != null">
+            and o.create_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            and o.create_time &lt;= #{endTime}
+        </if>
+        <if test="customerInfoQueryKey != null and customerInfoQueryKey != ''">
+            and (customer.phone like concat('%',#{customerInfoQueryKey},'%') or customer.customer_name like
+            concat('%',#{customerInfoQueryKey},'%'))
+        </if>
+        <if test="agiCustomerName != null and agiCustomerName != ''">
+            and t2.agi_customer_name like concat('%',#{agiCustomerName},'%')
+        </if>
+        <if test="productName != null and productName != ''">
+            and t3.name like concat('%',#{productName},'%')
+        </if>
+        <if test="bandwidth != null">
+            and t2.bandwidth = #{bandwidth}
+        </if>
+        <if test="actualStatus != null">
+            and t2.actual_status = #{actualStatus}
+        </if>
+        <if test="actualStatus != null">
+            and t2.actual_status = #{actualStatus}
+        </if>
+        <if test="actualAgiExpireStartTime != null">
+            and t2.actual_agi_expire_time &gt;= #{actualAgiExpireStartTime}
+        </if>
+        <if test="actualAgiExpireEndTime != null">
+            and t2.actual_agi_expire_time &lt;= #{actualAgiExpireEndTime}
+        </if>
+        <if test="actualAgiOpenStartTime != null">
+            and t2.actual_agi_open_time &gt;= str_to_date(concat(#{actualAgiOpenStartTime}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s')
+        </if>
+        <if test="actualAgiOpenEndTime != null">
+            and t2.actual_agi_open_time &lt;= str_to_date(concat(#{actualAgiOpenEndTime}, ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+        </if>
+        <if test="mobile != null and mobile != ''">
+            and t2.mobile like concat('%',#{mobile},'%')
+        </if>
+        order by o.create_time desc
+    </select>
+    <select id="getExtendList" resultType="com.lingyang.cloud.model.vo.order.ExtendOrderVO">
+
+
+        select o.*, e.`level` as `level`, c.customer_name as userName, c.phone as userPhone from sys_order o
+                                                                                                     left join sys_extend e
+                                                                                                               on o.create_by_id = e.user_id
+                                                                                                     left join sys_customer c
+                                                                                                               on e.user_id = c.id
+        where 1 = 1
+        <if test="name != null and name != ''">
+            and c.customer_name like concat('%',#{name},'%')
+        </if>
+        <if test="level != null">
+            and e.level = #{level}
+        </if>
+        <if test="settlementStatus != null">
+            and o.settlement_status = #{settlementStatus}
+        </if>
+        <if test="startTime != null and startTime != ''">
+            and o.pay_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            and o.pay_time &lt;= #{endTime}
+        </if>
+
+        <if test="userId != null">
+            and (o.first_user_id = #{userId} or o.two_user_id = #{userId})
+        </if>
+
+        and o.order_status = 1
+
+        order by o.create_time desc
+    </select>
+    <select id="getAgicList" resultType="com.lingyang.cloud.entity.SysOrderEntity">
+        select
+        o.id,
+        customer.phone as customer_phone,
+        customer.customer_name,
+        o.order_no,
+        o.order_type,
+        o.original_price,
+        o.premium_price,
+        o.user_discount_amount,
+        o.voucher_id,
+        o.voucher_amount,
+        o.coupon_id,
+        o.coupon_amount,
+        o.final_pay_amount,
+        o.balance_pay_amount,
+        o.online_pay_amount,
+        o.online_pay_type,
+        o.online_pay_serial_number,
+        o.pay_time,
+        o.order_status,
+        o.create_by,
+        o.create_by_id,
+        o.create_time,
+        o.update_by,
+        o.update_by_id,
+        o.update_time,
+        o.rewards_type,
+        o.recharge_name,
+        o.recharge_id,
+        o.rewards_amount,
+        o.rewards_time,
+        o.network_product_id as network_product_id,
+        o.network_day as networkDay,
+        o.network_value_id as networkValueId,
+        t3.is_bandwidth_display
+        from sys_order o
+        left join sys_customer customer on o.create_by_id = customer.id
+        left join sys_network_value t2 on o.network_value_id = t2.id
+        left join sys_network_product t3 on t2.product_id = t3.id
+
+        where o.del_flag = 0
+        <if test="orderNo != null and orderNo != ''">
+            and o.order_no like concat('%',#{orderNo},'%')
+        </if>
+        <if test="orderId != null">
+            and o.id = #{orderId}
+        </if>
+        <if test="orderType != null">
+            and o.order_type = #{orderType}
+        </if>
+        <if test="orderType != null and orderType.code == 3">
+            and t2.del_flag = 0
+        </if>
+        <if test="orderStatus != null">
+            and o.order_status = #{orderStatus}
+        </if>
+        <if test="rechargeId != null">
+            and o.recharge_id = #{rechargeId}
+        </if>
+        <if test="customerId != null">
+            and o.create_by_id = #{customerId}
+        </if>
+        <if test="startTime != null">
+            and o.create_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            and o.create_time &lt;= #{endTime}
+        </if>
+        <if test="customerInfoQueryKey != null and customerInfoQueryKey != ''">
+            and (customer.phone like concat('%',#{customerInfoQueryKey},'%') or customer.customer_name like
+            concat('%',#{customerInfoQueryKey},'%'))
+        </if>
+        <if test="agiCustomerName != null and agiCustomerName != ''">
+            and t2.agi_customer_name like concat('%',#{agiCustomerName},'%')
+        </if>
+        <if test="productName != null and productName != ''">
+            and t3.name like concat('%',#{productName},'%')
+        </if>
+        <if test="bandwidth != null">
+            and t2.bandwidth = #{bandwidth}
+        </if>
+        <if test="actualStatus != null">
+            and t2.actual_status = #{actualStatus}
+        </if>
+        <if test="actualAgiExpireStartTime != null">
+            and t2.actual_agi_expire_time &gt;= #{actualAgiExpireStartTime}
+        </if>
+        <if test="actualAgiExpireEndTime != null">
+            and t2.actual_agi_expire_time &lt;= #{actualAgiExpireEndTime}
+        </if>
+        <if test="mobile != null and mobile != ''">
+            and t2.mobile like concat('%',#{mobile},'%')
+        </if>
+        <if test="email != null and email != ''">
+            and t2.email like concat('%',#{email},'%')
+        </if>
+        order by o.actual_agi_expire_time
+    </select>
+    <select id="getTestList" resultType="com.lingyang.cloud.entity.SysOrderEntity">
+        SELECT
+            t1.*
+        FROM sys_order t1
+                 LEFT JOIN sys_order_source t2 on t1.id = t2.order_id
+        WHERE
+            t1.create_by_id = #{customerId}
+          and t1.order_status = 1
+          and t2.charge_type = 2
+    </select>
+</mapper>

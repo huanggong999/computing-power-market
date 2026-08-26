@@ -1,0 +1,21 @@
+.idea/
+**/.idea/
+*.iml
+
+# Build output and generated artifacts
+**/target/
+**/BOOT-INF/
+**/logs/
+*.class
+*.log
+
+# Frontend dependencies and generated bundles
+**/node_modules/
+**/dist/
+
+# Local credentials and certificates
+*.pem
+*.key
+.env
+.env.*
+!.env.example

@@ -1,0 +1,79 @@
+server:
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: ai-cloud-ops-api
+  profiles:
+    active: dev
+    include: web
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 1024MB
+      max-request-size: 1024MB
+  messages:
+    encoding: UTF-8
+# ===== SpringDoc配置 =====#
+springdoc:
+  swagger-ui:
+    # 自定义的文档界面访问路径。默认访问路径是/swagger-ui.html
+    path: /springdoc/index.html
+    # 字符串类型，一共三个值来控制操作和标记的默认展开设置。它可以是“list”（仅展开标记）、“full”（展开标记和操作）或“none”（不展开任何内容）。
+    docExpansion: none
+    # 布尔值。控制“试用”请求的请求持续时间（毫秒）的显示。
+    displayRequestDuration: true
+    # 布尔值。控制供应商扩展（x-）字段和操作、参数和架构值的显示。
+    showExtensions: true
+    # 布尔值。控制参数的扩展名（pattern、maxLength、minLength、maximum、minminimum）字段和值的显示。
+    showCommonExtensions: true
+    # 布尔值。禁用swagger用户界面默认petstore url。（从v1.4.1开始提供）。
+    disable-swagger-default-url: true
+
+  api-docs:
+    # 自定义的文档api元数据访问路径。默认访问路径是/v3/api-docs
+    path: /springdoc/api-docs
+    # 布尔值。在@Schema（名称name、标题title和说明description，三个属性）上启用属性解析程序。
+    resolve-schema-properties: true
+  # 布尔值。实现OpenApi规范的打印。
+  writer-with-default-pretty-printer: true
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: com.lingyang.cloud.entity.*
+  type-aliases-super-type: java.lang.Object
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: delFlag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      table-underline: true
+
+page-helper:
+  dialect-class: com.lingyang.common.datasource.page.PageDialect
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: false
+
+# forest配置
+#forest:
+#  backend: httpclient
+#  max-retry-count:  0 # 请求失败后重试次数，默认为0次不重试
+#  max-retry-interval: 1000 #重试间隔时间
+#  connect-timeout: 3000 #链接超时时间
+#  timeout: 30000  # 请求超时时间
+#  ## 日志总开关，打开/关闭Forest请求/响应日志（默认为 true）
+#  log-enabled: true
+#  ## 打开/关闭Forest请求日志（默认为 true）
+#  log-request: true
+#  ## 打开/关闭Forest响应状态日志（默认为 true）
+#  log-response-status: true
+#  ## 打开/关闭Forest响应内容日志（默认为 false）
+#  log-response-content: true

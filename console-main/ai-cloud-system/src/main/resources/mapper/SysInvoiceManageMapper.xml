@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lingyang.cloud.mapper.SysInvoiceManageMapper">
+
+    <select id="getDateList" resultType="com.lingyang.cloud.model.vo.customer.SysCustomerBillOverviewVO">
+        SELECT
+        b.customer_id,
+        customer_name,
+        phone,
+        bill,
+        max( bill_date ) AS bill_date,
+        sum( pay_price ) AS pay_price,
+        sum( voucher_amount ) AS voucher_amount,
+        sum( balance_pay_amount ) AS balance_pay_amount,
+        sum( arrears_amount ) AS arrears_amount,
+        GROUP_CONCAT(b.id) AS billIds,
+        CASE
+        WHEN COUNT(b.id) = COUNT(ib.id) AND MAX(m.status) != 3 THEN 1  -- 如果账单数量一致且状态不为3，tag=1
+        ELSE 0  -- 否则 tag=0（包括状态为3的情况）
+        END AS tag
+        FROM
+        sys_customer_bill b
+        LEFT JOIN sys_customer c ON b.customer_id = c.id
+        LEFT JOIN sys_invoice_bill ib ON b.id = ib.customer_bill_id
+        AND ib.del_flag = 0
+        LEFT JOIN sys_invoice_manage m ON ib.invoice_manage_id = m.id  -- 新增关联
+        AND m.del_flag = 0  -- 新增条件
+        WHERE
+        b.del_flag = 0
+        and b.source_type != 12
+        <if test="param.customerId != null">
+            and b.customer_id = #{param.customerId}
+        </if>
+        <if test="param.startMonth != null">
+            and STR_TO_DATE(b.bill, '%Y-%m') &gt;= #{param.startMonth}
+        </if>
+        <if test="param.endMonth != null">
+            and STR_TO_DATE(b.bill, '%Y-%m') &lt;= #{param.endMonth}
+        </if>
+        GROUP BY
+        b.customer_id,
+        b.bill
+        ORDER BY
+        tag ASC,
+        bill DESC
+    </select>
+    <select id="getTotalAmount" resultType="com.lingyang.cloud.model.vo.customer.SysCustomerBillOverviewVO">
+        SELECT
+        customer_id,
+        customer_name,
+        phone,
+        bill,
+        max( bill_date ) AS bill_date,
+        sum( pay_price ) AS pay_price,
+        sum( voucher_amount ) AS voucher_amount,
+        sum( balance_pay_amount ) AS balance_pay_amount,
+        sum( arrears_amount ) AS arrears_amount
+        FROM
+        sys_customer_bill b
+        LEFT JOIN sys_customer c ON b.customer_id = c.id
+        WHERE
+        b.del_flag = 0
+        <if test="param.customerId != null">
+            and b.customer_id = #{param.customerId}
+        </if>
+        <if test="param.startMonth != null">
+            and STR_TO_DATE(b.bill, '%Y-%m') &gt;= #{param.startMonth}
+        </if>
+        <if test="param.endMonth != null">
+            and STR_TO_DATE(b.bill, '%Y-%m') &lt;= #{param.endMonth}
+        </if>
+        GROUP BY
+        b.customer_id,
+        b.bill
+        ORDER BY
+        bill DESC
+    </select>
+    <select id="getTimeList" resultType="com.lingyang.cloud.model.vo.customer.SysCustomerBillOverviewVO">
+        SELECT
+        b.id AS billId,
+        b.customer_id,
+        customer_name,
+        phone,
+        bill,
+        bill_date AS bill_date,
+        pay_price AS pay_price,
+        voucher_amount AS voucher_amount,
+        balance_pay_amount AS balance_pay_amount,
+        arrears_amount AS arrears_amount,
+        source_type AS source_type,
+        CASE
+        WHEN ib.id IS NOT NULL
+        AND m.STATUS != 3 THEN
+        1
+        ELSE
+        0
+        END AS tag
+        FROM
+        sys_customer_bill b
+        LEFT JOIN sys_customer c ON b.customer_id = c.id
+        LEFT JOIN sys_invoice_bill ib ON b.id = ib.customer_bill_id
+        AND ib.del_flag = 0
+        LEFT JOIN sys_invoice_manage m ON ib.invoice_manage_id = m.id -- 新增关联
+        AND m.del_flag = 0 -- 新增条件
+        WHERE
+        b.del_flag = 0
+        and b.source_type != 12
+        <if test="param.customerId != null">
+            and b.customer_id = #{param.customerId}
+        </if>
+        <if test="param.startDay != null">
+            and b.bill_date &gt;= #{param.startDay}
+        </if>
+        <if test="param.endDay != null">
+            and b.bill_date &lt;= #{param.endDay}
+        </if>
+        ORDER BY
+            tag ASC,
+            bill DESC
+    </select>
+    <select id="getApplyInfo" resultType="com.lingyang.cloud.model.dto.PcInvoiceBillInfoDTO">
+        SELECT
+            m.customer_id,
+            c.customer_name,
+            c.phone,
+            m.id,
+            m.application_time,
+            t.invoice_title,
+            t.invoice_type,
+            m.invoice_number,
+            m.invoice_price as amount,
+            m.remark,
+            m.status,
+            m.proof,
+            e.email,
+            t.invoice_title as companyName,
+            t.number as companyCode,
+            t.address as companyAddress,
+            t.contact as companyContactName,
+            t.phone_number as companyContactPhone,
+            t.contact_phone
+        FROM sys_invoice_manage m
+            LEFT JOIN sys_invoice_title t on m.invoice_title_id = t.id
+            LEFT JOIN sys_invoice_email e ON m.invoice_email_id = e.id
+            LEFT JOIN sys_customer c ON m.customer_id = c.id
+        WHERE
+            m.del_flag = 0
+        <if test="param.customerId != null">
+            and m.customer_id = #{param.customerId}
+        </if>
+        <if test="param.startDay != null">
+            and m.application_time &gt;= #{param.startDay}
+        </if>
+        <if test="param.endDay != null">
+            and m.application_time &lt;= #{param.endDay}
+        </if>
+        ORDER BY
+        m.application_time DESC
+    </select>
+    <select id="getDetails" resultType="com.lingyang.cloud.model.dto.excelDto.PcInvoiceExportDto">
+        SELECT
+            o.order_no AS orderNo,
+            b.bill AS bill,
+            b.bill_type AS type,
+            t.product_name AS productName,
+            b.pay_price AS totalAmount,
+            0 AS alreadyAmount,
+            b.pay_price AS amount
+        FROM
+            sys_customer_bill b
+                LEFT JOIN sys_customer_instances c ON b.instance_id = c.instance_id
+                LEFT JOIN sys_order o ON c.order_id = o.id
+                LEFT JOIN sys_order_source t ON o.order_no = t.order_no
+        where
+            b.id IN
+        <foreach collection="bills" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+
+    </select>
+    <select id="getAdvanceInvoice" resultType="com.lingyang.cloud.model.vo.customer.SysCustomerBillOverviewVO">
+        SELECT
+        b.id as billId,
+        customer_id,
+        customer_name,
+        phone,
+        bill,
+        bill_date AS bill_date,
+        pay_price AS pay_price,
+        credit_line_amount AS credit_line_amount,
+        arrears_amount AS arrears_amount,
+        source_type AS source_type,
+        CASE WHEN ib.id IS NOT NULL THEN 1 ELSE 0 END AS tag
+        FROM
+        sys_customer_bill b
+        LEFT JOIN sys_customer c ON b.customer_id = c.id
+        LEFT JOIN sys_invoice_bill ib ON b.id = ib.customer_bill_id
+        AND ib.del_flag = 0
+        WHERE
+        b.del_flag = 0
+        and b.source_type = 12
+        <if test="param.customerId != null">
+            and b.customer_id = #{param.customerId}
+        </if>
+        <if test="param.startDay != null">
+            and b.bill_date &gt;= #{param.startDay}
+        </if>
+        <if test="param.endDay != null">
+            and b.bill_date &lt;= #{param.endDay}
+        </if>
+        ORDER BY
+        tag ASC,
+        bill DESC
+    </select>
+    <select id="getInvoiceList" resultType="com.lingyang.cloud.model.vo.customer.SysCustomerBillOverviewVO">
+        SELECT
+        b.id as billId,
+        b.customer_id,
+        customer_name,
+        phone,
+        bill,
+        bill_date AS bill_date,
+        pay_price AS pay_price,
+        voucher_amount AS voucher_amount,
+        balance_pay_amount AS balance_pay_amount,
+        arrears_amount AS arrears_amount,
+        source_type AS source_type,
+        CASE
+        WHEN ib.id IS NOT NULL
+        AND m.STATUS != 3 THEN
+        1
+        ELSE
+        0
+        END AS tag
+        FROM
+        sys_customer_bill b
+        LEFT JOIN sys_customer c ON b.customer_id = c.id
+        LEFT JOIN sys_invoice_bill ib ON b.id = ib.customer_bill_id
+        AND ib.del_flag = 0
+        LEFT JOIN sys_invoice_manage m ON ib.invoice_manage_id = m.id -- 新增关联
+        AND m.del_flag = 0 -- 新增条件
+        WHERE
+        b.del_flag = 0
+        AND (ib.id IS NULL OR m.status = 3)
+        <if test="param.customerId != null">
+            and b.customer_id = #{param.customerId}
+        </if>
+        <if test="param.startDay != null">
+            and b.bill_date &gt;= #{param.startDay}
+        </if>
+        <if test="param.endDay != null">
+            and b.bill_date &lt;= #{param.endDay}
+        </if>
+        ORDER BY
+        tag ASC,
+        bill DESC
+    </select>
+
+</mapper>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lingyang.cloud.mapper.SysCustomerGpuPodMapper">
+
+    <resultMap id="BaseResultMap" type="com.lingyang.cloud.entity.SysCustomerGpuPodEntity">
+        <id column="id" property="id"/>
+        <result column="customer_id" property="customerId"/>
+        <result column="order_id" property="orderId"/>
+        <result column="order_source_uid" property="orderSourceUid"/>
+        <result column="instance_id" property="instanceId"/>
+        <result column="instance_name" property="instanceName"/>
+        <result column="status" property="status"/>
+        <result column="region_code" property="regionCode"/>
+        <result column="region_name" property="regionName"/>
+        <result column="zone_code" property="zoneCode"/>
+        <result column="zone_name" property="zoneName"/>
+        <result column="gpu_model" property="gpuModel"/>
+        <result column="gpu_count" property="gpuCount"/>
+        <result column="gpu_memory" property="gpuMemory"/>
+        <result column="cpu_cores" property="cpuCores"/>
+        <result column="memory_size" property="memorySize"/>
+        <result column="system_disk_size" property="systemDiskSize"/>
+        <result column="data_disk_size" property="dataDiskSize"/>
+        <result column="image_url" property="imageUrl"/>
+        <result column="billing_mode" property="billingMode"/>
+        <result column="billing_status" property="billingStatus"/>
+        <result column="price_per_hour" property="pricePerHour"/>
+        <result column="create_time" property="createTime"/>
+        <result column="start_time" property="startTime"/>
+        <result column="stop_time" property="stopTime"/>
+        <result column="release_time" property="releaseTime"/>
+        <result column="expire_time" property="expireTime"/>
+        <result column="scheduled_shutdown_time" property="scheduledShutdownTime"/>
+        <result column="ssh_host" property="sshHost"/>
+        <result column="ssh_port" property="sshPort"/>
+        <result column="ssh_username" property="sshUsername"/>
+        <result column="ssh_password" property="sshPassword"/>
+        <result column="extra_info" property="extraInfo"/>
+        <result column="create_by" property="createBy"/>
+        <result column="create_by_id" property="createById"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="update_by_id" property="updateById"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="del_flag" property="delFlag"/>
+    </resultMap>
+
+</mapper>

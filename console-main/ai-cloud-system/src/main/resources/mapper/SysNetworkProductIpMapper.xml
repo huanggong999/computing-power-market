@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lingyang.cloud.mapper.SysNetworkProductIpMapper">
+    <select id="getIpList" resultType="com.lingyang.cloud.model.dto.excelDto.SysProductIpExportDto">
+        select
+        t2.name as productName,
+        t.ip,
+        t.public_ip as publicIp,
+        t.ip_address as ipAddress,
+        CASE
+        WHEN t.status = 0 THEN '未使用'
+        WHEN t.status = 1 THEN '已使用'
+        WHEN t.status = 2 THEN '等待中'
+        ELSE '未知类型'
+        END AS status,
+        t3.customer_name as nickname,
+        t.email
+        from sys_network_product_ip t
+        left join sys_network_product t2 on t.product_id = t2.id
+        left join sys_customer t3 on t.user_id = t3.id
+        <where>
+            <if test="param.productId != null">
+                and t.product_id = #{param.productId}
+            </if>
+            <if test="param.status != null">
+                and t.status = #{param.status}
+            </if>
+            <if test="param.email != null and param.email != ''">
+                and t.email like concat ('%',#{param.email},'%')
+            </if>
+            <if test="param.ip != null and param.ip != ''">
+                and t.ip like concat ('%',#{param.ip},'%')
+            </if>
+            <if test="param.publicIp != null and param.publicIp != ''">
+                and t.public_ip like concat ('%',#{param.publicIp},'%')
+            </if>
+            <if test="param.customerName != null and param.customerName != ''">
+                and t3.customer_name like concat ('%',#{param.customerName},'%')
+            </if>
+            <if test="param.ids != null and param.ids.size() > 0">
+                and t.id in
+                <foreach collection="param.ids" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
+        </where>
+    </select>
+    <select id="getPage" resultType="com.lingyang.cloud.entity.SysNetworkProductIpEntity">
+        select
+        t.id,
+        t.product_id as productId,
+        t.ip,
+        t.public_ip as publicIp,
+        t.ip_address as ipAddress,
+        t.user_id as userId,
+        t.email,
+        t.status,
+        t.use_time as useTime,
+        t.create_time as createTime,
+        t.update_time as updateTime,
+        t2.customer_name as nickname
+        from sys_network_product_ip t
+        left join sys_customer t2 on t.user_id = t2.id
+        <where>
+            <if test="param.status != null">
+                and t.status = #{param.status}
+            </if>
+            <if test="param.productId != null">
+                and t.product_id = #{param.productId}
+            </if>
+            <if test="param.email != null and param.email != ''">
+                and t.email like concat ('%',#{param.email},'%')
+            </if>
+            <if test="param.ip != null and param.ip != ''">
+                and t.ip like concat ('%',#{param.ip},'%')
+            </if>
+            <if test="param.publicIp != null and param.publicIp != ''">
+                and t.public_ip like concat ('%',#{param.publicIp},'%')
+            </if>
+            <if test="param.customerName != null and param.customerName != ''">
+                and t2.customer_name like concat ('%',#{param.customerName},'%')
+            </if>
+        </where>
+        order by t.use_time, t.status desc, t.id asc
+    </select>
+</mapper>

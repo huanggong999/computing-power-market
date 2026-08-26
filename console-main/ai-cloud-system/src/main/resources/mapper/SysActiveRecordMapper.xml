@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lingyang.cloud.mapper.SysActiveRecordMapper">
+
+    <select id="getActiveRecord" resultType="com.lingyang.cloud.entity.SysActiveRecordEntity">
+        SELECT
+            id,
+            active_id,
+            share_user_id,
+            share_username,
+            share_user_phone,
+            invitation_time,
+            register_user_id,
+            register_username,
+            register_user_phone,
+            order_no
+        FROM sys_active_record
+        WHERE
+            active_id = #{param.activeId}
+        <if test="param.nameOrPhone != null and param.nameOrPhone.trim() != ''">
+            AND (share_username LIKE concat('%', #{param.nameOrPhone},'%') OR share_user_phone LIKE concat('%',#{param.nameOrPhone},'%') OR register_username LIKE concat('%',#{param.nameOrPhone},'%') OR register_user_phone LIKE concat('%',#{param.nameOrPhone},'%'))
+        </if>
+        <if test="param.startDay != null">
+            AND invitation_time &gt;= #{param.startDay}
+        </if>
+        <if test="param.endDay != null">
+            AND invitation_time &lt;= #{param.endDay}
+        </if>
+        order by invitation_time desc
+    </select>
+    <select id="getPcActiveRecord" resultType="com.lingyang.cloud.entity.SysActiveRecordEntity">
+        SELECT
+            id,
+            active_id,
+            share_user_id,
+            share_username,
+            share_user_phone,
+            invitation_time,
+            register_user_id,
+            register_username,
+            register_user_phone,
+            order_no
+        FROM sys_active_record
+        WHERE
+            active_id = #{param.activeId}
+        <if test="param.nameOrPhone != null and param.nameOrPhone.trim() != ''">
+            AND (register_username LIKE concat('%',#{param.nameOrPhone},'%') OR register_user_phone LIKE concat('%',#{param.nameOrPhone},'%'))
+        </if>
+            order by invitation_time desc
+    </select>
+</mapper>

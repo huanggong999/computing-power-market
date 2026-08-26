@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lingyang.cloud.mapper.SysCustomerCreditLineMapper">
+
+    <update id="returnCreditLineAmount">
+        <foreach collection="list" separator=";" item="entity" >
+            update sys_customer_credit_line
+            set use_amount = use_amount - #{entity.useAmount}
+            where id = #{entity.id}
+        </foreach>
+    </update>
+</mapper>

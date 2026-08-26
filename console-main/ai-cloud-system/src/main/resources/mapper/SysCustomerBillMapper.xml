@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lingyang.cloud.mapper.SysCustomerBillMapper">
+
+    <select id="getBillOverviewPage"
+            resultType="com.lingyang.cloud.model.vo.customer.SysCustomerBillOverviewVO">
+        select customer_id,
+        customer_name,
+        phone,
+        bill,
+        max(bill_date) as bill_date,
+        sum(original_price) as original_price,
+        sum(premium_price) as premium_price,
+        sum(user_discount_amount) as user_discount_amount,
+        sum(pay_price) as pay_price,
+        sum(voucher_amount) as voucher_amount,
+        sum(credit_line_amount) as credit_line_amount,
+        sum(balance_pay_amount) as balance_pay_amount,
+        sum(arrears_amount) as arrears_amount
+        from sys_customer_bill b
+        left join sys_customer c on b.customer_id = c.id
+        where
+        b.del_flag = 0
+        <if test="customerInfoQuery != null and customerInfoQuery != ''">
+              and (c.customer_name like concat('%',#{customerInfoQuery},'%') or c.phone like concat('%',#{customerInfoQuery},'%'))
+        </if>
+        <if test="customerId != null">
+            and customer_id = #{customerId}
+        </if>
+        <if test="billNo != null and billNo != ''">
+            and bill_no like concat('%',#{billNo},'%')
+        </if>
+        <if test="startDate != null">
+            and bill_date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null">
+            and bill_date &lt;= #{endDate}
+        </if>
+        <if test="month != null">
+            and DATE_FORMAT(bill_date, '%Y-%m') = DATE_FORMAT(#{month}, '%Y-%m')
+        </if>
+        group by customer_id, bill
+        order by bill desc
+    </select>
+
+    <select id="getList" resultType="com.lingyang.cloud.entity.SysCustomerBillEntity">
+        select b.id,
+               b.customer_id,
+               b.bill,
+               b.bill_no,
+               b.bill_date,
+               b.source_type,
+               b.source_id,
+               b.charge_type,
+               b.duration,
+               b.charge_unit,
+               b.bill_type,
+               b.settle_type,
+               b.instance_id,
+               b.instance_name,
+               b.unit_id,
+               b.region,
+               b.zone,
+               b.price_type,
+               b.price,
+               b.`usage`,
+               b.usage_unit,
+               b.original_price,
+               b.premium_price,
+               b.user_discount_amount,
+               b.pay_price,
+               b.voucher_amount,
+               b.credit_line_amount,
+               b.balance_pay_amount,
+               b.arrears_amount,
+               b.pay_status,
+               b.pay_time,
+               b.bill_start_time,
+               b.bill_end_time,
+               b.create_by,
+               b.create_by_id,
+               b.create_time,
+               b.update_by,
+               b.update_by_id,
+               b.update_time,
+               c.customer_name,
+               c.phone
+        from sys_customer_bill b
+        left join sys_customer c on b.customer_id = c.id
+        where b.del_flag = 0
+        <if test="customerId != null">
+            and b.customer_id = #{customerId}
+        </if>
+        <if test="customerInfoQuery != null and customerInfoQuery != ''">
+            and (c.customer_name like concat('%',#{customerInfoQuery},'%') or c.phone like concat('%',#{customerInfoQuery},'%'))
+        </if>
+        <if test="customerId != null">
+            and customer_id = #{customerId}
+        </if>
+        <if test="billNo != null and billNo != ''">
+            and bill_no like concat('%',#{billNo},'%')
+        </if>
+        <if test="startDate != null">
+            and bill_date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null">
+            and bill_date &lt;= #{endDate}
+        </if>
+        <if test="month != null">
+            and DATE_FORMAT(bill_date, '%Y-%m') = DATE_FORMAT(#{month}, '%Y-%m')
+        </if>
+        order by b.create_time desc
+    </select>
+    <select id="incomeList" resultType="com.lingyang.cloud.model.dto.AppletsIncomeListDTO">
+        SELECT
+        t.transaction_type,
+        t.amount as changeAmount,
+        t.after_amount as availableBalance,
+        t.create_time
+        FROM
+        `sys_customer_amount_log` t
+        LEFT JOIN sys_order o on t.order_id = o.id
+        WHERE
+        t.amount_type = 0
+        <if test="param.customerId != null">
+            and t.customer_id = #{param.customerId}
+        </if>
+        <choose>
+            <when test="param.month != null">
+                and DATE_FORMAT(t.create_time, '%Y-%m') = DATE_FORMAT(#{param.month}, '%Y-%m')
+            </when>
+            <otherwise>
+                and DATE_FORMAT(t.create_time, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')
+            </otherwise>
+        </choose>
+        <if test="param.transactionType != null">
+            and t.transaction_type = #{param.transactionType}
+        </if>
+        ORDER BY
+        t.create_time DESC
+    </select>
+</mapper>

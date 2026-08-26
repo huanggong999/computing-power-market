@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lingyang.cloud.mapper.SysHomeEcsMapper">
+    <select id="selectHomeEcsWithDetails" resultType="com.lingyang.cloud.entity.SysHomeEcsEntity">
+        SELECT
+            t.id,
+            t.ecs_id,
+            t.name,
+            t.remark,
+            t.status,
+            t.pay_price_text,
+            t.pay_price_color,
+            t.ecs_type,
+            t.product_type,
+            t1.cpu_number,
+            t1.memory_size,
+            t1.gpu_model,
+            t1.ecs_scale,
+            t1.hours_price,
+            t1.month_price,
+            t1.one_year_price,
+            t1.two_year_price,
+            t1.three_year_price,
+            t1.regions_zones
+        FROM sys_home_ecs t
+        LEFT JOIN sys_ecs t1 ON t.ecs_id = t1.id
+        WHERE
+            t.del_flag = 0
+        <if test="query.name != null and query.name != ''">
+            AND t.name LIKE CONCAT('%',#{query.name},'%')
+        </if>
+        <if test="query.status != null">
+            AND t.status = #{query.status}
+        </if>
+        <if test="query.productType != null">
+            AND t.product_type = #{query.productType}
+        </if>
+        order by t.create_time desc
+
+    </select>
+</mapper>
