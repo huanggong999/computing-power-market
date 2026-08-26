@@ -1,0 +1,1 @@
+import{C as e}from"./index-DtPvF5CZ.js";const s=t=>e.get(`/pc/config/getConfig/${t}`),i=t=>e.get("/pc/volume/getList",{params:{region:t}}),a=t=>{const n=/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;"'<>,.?/-]).{8,}$/;return!(!t||!n.test(t)||t.length<8)};export{i as a,a as c,s as g};

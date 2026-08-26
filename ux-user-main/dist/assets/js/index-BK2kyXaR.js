@@ -1,0 +1,1 @@
+import{_ as o,k as r,w as t,T as a,r as n,o as s,f as c}from"./index-DtPvF5CZ.js";const _={};function f(i,d){const e=n("router-view");return s(),r(a,{appear:"",name:"fade-transform",mode:"out-in"},{default:t(()=>[c(e)]),_:1})}const p=o(_,[["render",f]]);export{p as default};

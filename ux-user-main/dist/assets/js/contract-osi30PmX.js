@@ -1,0 +1,1 @@
+import{C as c}from"./index-DtPvF5CZ.js";const r=t=>c.get("/pc/contract/page",{params:t}),a=()=>c.get("/pc/contract/company-info"),e=t=>c.post("/pc/contract/generate-order-contract",t);export{r as a,e as c,a as g};

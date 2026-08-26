@@ -1,0 +1,1 @@
+import{C as e}from"./index-DtPvF5CZ.js";const c=t=>e.get("/pc/active/details/list",{params:t}),s=t=>e.get(`/pc/active/details/${t}`),a=t=>e.get("/pc/active/record/page",{params:t}),g=t=>e.get(`/pc/active/getUserById/${t}`);export{a,s as b,g as c,c as g};

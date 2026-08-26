@@ -1,0 +1,1 @@
+import{d as o,c as a,a as n,n as _,af as c,o as r,_ as i}from"./index-DtPvF5CZ.js";const l={class:"show-box"},p={class:"title"},d=o({name:"ShowBox"}),f=o({...d,props:{title:{}},setup(s){const t=s;return(e,m)=>(r(),a("div",l,[n("div",p,_(t.title),1),c(e.$slots,"box",{class:"box"},void 0,!0)]))}}),x=i(f,[["__scopeId","data-v-004ff665"]]);export{x as _};

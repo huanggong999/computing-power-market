@@ -1,0 +1,1 @@
+import{_ as e,c as t,o as c}from"./index-DtPvF5CZ.js";const r={},o=["src"];function n(s,_){return c(),t("iframe",{style:{width:"100%",height:"100%"},src:"/product_Agreement.pdf?_t="+Date.now()},null,8,o)}const d=e(r,[["render",n]]);export{d as default};

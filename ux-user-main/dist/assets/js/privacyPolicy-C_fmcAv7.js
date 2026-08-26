@@ -1,0 +1,1 @@
+import{_ as c,c as e,o as t}from"./index-DtPvF5CZ.js";const o={},r=["src"];function s(n,_){return t(),e("iframe",{style:{width:"100%",height:"100%"},src:"/privacy_policy.pdf?_t="+Date.now()},null,8,r)}const i=c(o,[["render",s]]);export{i as default};

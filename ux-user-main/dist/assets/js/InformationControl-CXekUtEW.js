@@ -1,0 +1,1 @@
+import{_ as o,c as t,o as e}from"./index-DtPvF5CZ.js";const n={},r=["src"];function c(s,_){return e(),t("iframe",{style:{width:"100%",height:"100%"},src:"/Information_control_protocol.pdf?_t="+Date.now()},null,8,r)}const f=o(n,[["render",c]]);export{f as default};

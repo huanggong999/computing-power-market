@@ -1,0 +1,1 @@
+import{bb as o}from"./index-DtPvF5CZ.js";const i=o("networkProduct",{state:()=>({production:{}}),getters:{},actions:{setProductionDetail(t){this.production=t},clearProductionDetail(){this.production={}},setProductionName(t){this.production.name=t}}});export{i as u};

@@ -1,0 +1,1 @@
+import{C as t}from"./index-DtPvF5CZ.js";const i=()=>t.get("/pc/container/get/container/overview"),a=e=>t.post("/pc/container/list",e),o=e=>t.get(`/pc/container/details/${e}`),r=e=>t.delete(`/pc/container/delete/container/${e}`),s=e=>t.post("/pc/container/get/image/version",e);export{s as a,a as b,i as c,r as d,o as g};

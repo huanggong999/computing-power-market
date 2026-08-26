@@ -1,0 +1,1 @@
+import{_ as e,c as t,o as c}from"./index-DtPvF5CZ.js";const r={},s=["src"];function o(_,n){return c(),t("iframe",{style:{width:"100%",height:"100%"},src:"/terms_of_service.pdf?_t="+Date.now()},null,8,s)}const f=e(r,[["render",o]]);export{f as default};

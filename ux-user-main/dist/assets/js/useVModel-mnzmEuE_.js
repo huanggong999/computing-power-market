@@ -1,0 +1,1 @@
+import{h as f,b6 as g}from"./index-DtPvF5CZ.js";const s=new WeakMap,h=(e,t,r)=>f({get(){if(g(e[t])!=="object")return e[t];if(s.has(e[t]))return s.get(e[t]);const u=new Proxy(e[t],{get(n,c){return Reflect.get(n,c)},set(n,c,d){return r("update:"+t,{...n,[c]:d}),!0}});return s.set(e[t],u),u},set(u){r("update:"+t,u)}});export{h as u};
