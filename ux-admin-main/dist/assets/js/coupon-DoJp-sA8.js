@@ -1,0 +1,1 @@
+import{r as e}from"./index-B0NoFjUK.js";const p=o=>e.get("/system/coupon/page",{params:o}),t=o=>e.get(`/system/coupon/?id=${o}`),c=o=>e.post("/system/coupon/save",o),n=o=>e.put("/system/coupon/update",o),a=o=>e.delete(`/system/coupon/?id=${o}`);export{a,c as b,t as c,n as d,p as e};

@@ -1,0 +1,1 @@
+import{_ as o}from"./MyFormCreate.vue_vue_type_script_setup_true_name_MyFormCreate_lang-DMmL9vIZ.js";import"./index-B0NoFjUK.js";/* empty css                  *//* empty css                   */import"./useVModel-4Ur4F5LG.js";export{o as default};

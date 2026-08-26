@@ -1,0 +1,1 @@
+import{r as s}from"./index-B0NoFjUK.js";const o=e=>s.get("/system/role/page",{params:e}),l=e=>s.get(`/system/role/?id=${e}`),a=e=>s.post("/system/role/save",e),i=e=>s.put("/system/role/update",e),p=e=>s.delete(`/system/role/?id=${e}`);export{l as a,a as b,p as d,i as e,o as g};

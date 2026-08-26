@@ -1,0 +1,1 @@
+import{r as s}from"./index-B0NoFjUK.js";const o=e=>s.get("/system/gpu/zone/page",{params:e}),g=()=>s.get("/system/gpu/zone/list"),n=e=>s.post("/system/gpu/zone/save",e),a=e=>s.post("/system/gpu/zone/save",e),u=e=>s.get(`/system/gpu/zone/delete?id=${e}`),i=(e,t)=>s.get(`/system/gpu/zone/status?id=${e}&status=${t}`);export{u as a,a as b,n as c,i as d,o as e,g};

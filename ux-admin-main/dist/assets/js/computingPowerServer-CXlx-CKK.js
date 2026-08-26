@@ -1,0 +1,1 @@
+import{r as s}from"./index-B0NoFjUK.js";const o=e=>s.get("/system/home-ecs/page",{params:e}),m=e=>s.post("/system/home-ecs/save",e),c=e=>s.post("/system/home-ecs/update",e),a=e=>s.get(`/system/home-ecs/delete?id=${e}`);export{m as a,c as b,o as c,a as h};

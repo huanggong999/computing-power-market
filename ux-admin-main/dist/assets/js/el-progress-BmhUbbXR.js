@@ -1,0 +1,1 @@
+import{r as t}from"./index-B0NoFjUK.js";const i=r=>t.post("/file/upload",r,{headers:{"Content-Type":"multipart/form-data"}});var e=(r=>(r.Success="上传成功！",r.Error="上传失败，请您重新上传！",r.FileSize="太大了，请您重新上传！",r.Type="不符合所需的格式，请您重新上传！",r.Exceed="当前选择太多了，请移除后上传！",r))(e||{});export{e as U,i as a};

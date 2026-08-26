@@ -1,0 +1,1 @@
+import{c as d,at as f}from"./index-B0NoFjUK.js";const s=new WeakMap,i=(e,t,r)=>d({get(){if(f(e[t])!=="object")return e[t];if(s.has(e[t]))return s.get(e[t]);const u=new Proxy(e[t],{get(n,c){return Reflect.get(n,c)},set(n,c,a){return r("update:"+t,{...n,[c]:a}),!0}});return s.set(e[t],u),u},set(u){r("update:"+t,u)}});export{i as u};

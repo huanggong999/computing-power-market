@@ -1,0 +1,1 @@
+import{r as e}from"./index-B0NoFjUK.js";const t=p=>e.get("/system/apply-type/page",{params:p}),y=()=>e.post("/system/apply-type/first-list"),a=p=>e.post("/system/apply-type/save",p),l=p=>e.post("/system/apply-type/update",p),o=()=>e.post("/system/apply-type/all"),i=p=>e.get(`/system/apply-type/delete?id=${p}`);export{o as a,i as b,a as c,l as d,y as e,t as f};

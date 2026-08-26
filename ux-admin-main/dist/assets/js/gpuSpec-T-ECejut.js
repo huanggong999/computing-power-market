@@ -1,0 +1,1 @@
+import{r as e}from"./index-B0NoFjUK.js";const c=s=>e.get("/system/gpu/spec/page",{params:s}),g=()=>e.get("/system/gpu/spec/list"),a=s=>e.post("/system/gpu/spec/save",s),u=s=>e.post("/system/gpu/spec/update",s),i=s=>e.get(`/system/gpu/spec/delete?id=${s}`),o=(s,p)=>e.get(`/system/gpu/spec/status?id=${s}&status=${p}`);export{i as a,u as b,a as c,o as d,c as e,g};

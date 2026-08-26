@@ -1,0 +1,1 @@
+import{E as i}from"./index-B0NoFjUK.js";const s=async(c,n,r={},a=!0,d=".xlsx")=>{a&&i.info("如果数据庞大会导致下载缓慢哦，请您耐心等待！");try{const e=await c(r),t=URL.createObjectURL(e),o=document.createElement("a");o.href=t,o.download=`${n}${d}`,document.body.appendChild(o),o.click(),document.body.removeChild(o),window.URL.revokeObjectURL(t)}catch{}};export{s as u};

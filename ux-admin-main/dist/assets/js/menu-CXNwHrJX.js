@@ -1,0 +1,1 @@
+import{r as s}from"./index-B0NoFjUK.js";const n=()=>s.get("/system/menu/tree"),u=e=>s.get(`/system/menu/?id=${e}`),a=e=>s.post("/system/menu/save",e),m=e=>s.put("/system/menu/update",e),p=e=>s.delete(`/system/menu/?id=${e}`);export{n as a,p as d,u as g,a as s,m as u};

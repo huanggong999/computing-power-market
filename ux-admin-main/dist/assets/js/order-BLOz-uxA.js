@@ -1,0 +1,1 @@
+import{r as o}from"./index-B0NoFjUK.js";const t=s=>o.get("/system/order/page",{params:s}),r=s=>o.get("/system/ecs/work/page",{params:s}),p=s=>o.get(`/system/ecs/work/detail/${s}`),a=s=>o.post("/system/ecs/work/operation",s),i=s=>o.post("/system/ecs/work/openWork",s);export{i as a,r as b,a as c,t as o,p as w};

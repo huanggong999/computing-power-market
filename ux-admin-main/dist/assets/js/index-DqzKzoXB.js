@@ -1,0 +1,1 @@
+import{r as s}from"./index-B0NoFjUK.js";const g=e=>s.get(`/system/config/getConfig/${e}`),o=(e,t)=>s.put(`/system/config/update/${e}`,t),i=e=>s.get("/system/message/page",{params:e,noLoading:!0}),n=e=>s.get(`/system/message/read?id=${e}`),p=()=>s.get("/system/message/readAll");export{n as a,i as b,g,p as r,o as u};
