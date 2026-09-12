@@ -1,0 +1,140 @@
+.instance-detail {
+  .info-card {
+    width: 1522px;
+    min-height: 134px;
+    background: #f7f8fb;
+    border-radius: 10px 10px 10px 10px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    padding: 30px 0px 30px 92px;
+    .info {
+      .label {
+        min-width: 93px;
+        font-weight: 400;
+        font-size: 16px;
+        color: #83889d;
+      }
+      .value {
+        font-weight: 400;
+        font-size: 16px;
+        color: #000000;
+      }
+    }
+  }
+  .footer {
+    display: flex;
+    gap: 10px;
+    height: 76px;
+    border-top: 1px solid #e6e6e6;
+    .choose {
+      font-weight: 400;
+      font-size: 16px;
+      color: #666666;
+      .num {
+        font-weight: 600;
+        font-size: 16px;
+        color: #3972fd;
+      }
+    }
+    .el-button {
+      height: 32px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0px;
+    }
+  }
+  .dialog {
+    .title {
+      font-weight: 500;
+      font-size: 18px;
+    }
+    .label {
+      font-weight: 400;
+      font-size: 16px;
+      margin-top: 30px;
+    }
+    .radio-card {
+      width: 659px;
+      min-height: 102px;
+      border-radius: 0px 0px 0px 0px;
+      border: 1px solid #d9d9d9;
+      gap: 8px;
+      padding: 20px;
+      margin-left: 123px;
+      .info {
+        .title {
+          font-weight: 500;
+          font-size: 20px;
+          color: #3972fd;
+        }
+        .content {
+          display: flex;
+          flex-direction: column;
+        }
+      }
+    }
+    // 选中样式
+    .select-card {
+      border: 1px solid #3972fd;
+    }
+    .btns {
+      display: flex;
+      justify-content: end;
+    }
+
+    // 删除卡片
+    .delete {
+      .collapse {
+        background-color: white;
+        padding-bottom: 0;
+        .collapse-title {
+          width: 100%;
+          justify-content: space-between;
+          .label {
+            font-weight: 500;
+            font-size: 16px;
+            color: #000000;
+            margin-top: 0;
+          }
+          .date {
+            font-weight: 400;
+            font-size: 14px;
+            color: #83889d;
+          }
+        }
+      }
+    }
+    // 告警卡片
+    .warning {
+      width: 706px;
+      height: 160px;
+      padding-left: 20px;
+      background: linear-gradient(86deg, #fef0f0 0%, #ffffff 100%);
+      border-radius: 10px 10px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      .item {
+        width: 652px;
+        font-weight: 400;
+        font-size: 16px;
+        color: #666666;
+        .circle {
+          color: #ff4151;
+          padding-right: 8px;
+        }
+      }
+      .title {
+        font-weight: 500;
+        font-size: 16px;
+        color: #000000;
+      }
+    } 
+    // 重置密码
+    .form{
+      display: flex;
+    }                     
+  }
+}

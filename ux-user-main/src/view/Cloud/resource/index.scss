@@ -1,0 +1,76 @@
+.top-card {
+  padding: 26px 24px;
+  background: linear-gradient(180deg, #e6eeff 0%, #ffffff 100%);
+  border-radius: 10px 10px 10px 10px;
+  .title {
+    font-weight: 500;
+    font-size: 38px;
+    color: #000000;
+    span {
+      font-weight: 400;
+      font-size: 18px;
+      color: #000000;
+    }
+    .num {
+      font-family: DIN Alternate, DIN Alternate;
+      font-weight: bold;
+      font-size: 44px;
+      color: #3972fd;
+    }
+  }
+  .first-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 30px;
+    img {
+      width: 274px;
+      height: 122px;
+    }
+  }
+  .create-exam {
+    &:hover {
+      cursor: pointer;
+    }
+  }
+  .create {
+    font-weight: 400;
+    font-size: 16px;
+    color: #3972fd;
+    &:hover {
+      cursor: pointer;
+    }
+  }
+}
+.bottom {
+  position: relative;
+  grid-template-columns: 7fr 3fr;
+  gap: 20px;
+
+  .more {
+    position: absolute;
+    font-weight: 400;
+    font-size: 16px;
+    color: #999999;
+  }
+}
+.urls {
+  display: gird !important;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  row-gap: 30px;
+  padding-left: 20px;
+  .url {
+    font-weight: 400;
+    font-size: 20px;
+    color: #666666;
+    &:hover {
+      cursor: pointer;
+    }
+  }
+}
+.f-box {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  row-gap: 20px;
+}

@@ -1,0 +1,441 @@
+[
+  {
+    "path": "/console",
+    "name": "Console",
+    "component": "Console/index",
+    "meta": {
+      "icon": "House",
+      "title": "主控台",
+      "hideMenu": false,
+      "activeMenu": "",
+      "isLink": false,
+      "isAffix": false,
+      "isFull": false
+    },
+    "children": [
+      {
+        "path": "/invoiceManagement",
+        "name": "InvoiceManagement",
+        "component": "Console/invoice/invoiceManagement",
+        "meta": {
+          "icon": "House",
+          "title": "发票管理",
+          "hideMenu": true,
+          "activeMenu": "/console",
+          "isLink": false,
+          "isAffix": false,
+          "isFull": false
+        },
+        "children": [
+          {
+            "path": "/invoiceManagement/manageInvoice",
+            "name": "ManageInvoice",
+            "component": "Console/invoice/manageInvoice",
+            "meta": {
+              "icon": "House",
+              "title": "管理发票信息与接收方式",
+              "hideMenu": true,
+              "activeMenu": "/console",
+              "isLink": false,
+              "isAffix": false,
+              "isFull": false
+            }
+          },
+          {
+            "path": "/invoiceManagement/applyBilling",
+            "name": "ApplyBilling",
+            "component": "Console/invoice/applyBilling",
+            "meta": {
+              "icon": "House",
+              "title": "申请开票",
+              "hideMenu": true,
+              "activeMenu": "/console",
+              "isLink": false,
+              "isAffix": false,
+              "isFull": false
+            }
+          }
+        ]
+      },
+      {
+        "path": "/discountCouponList",
+        "name": "DiscountCouponList",
+        "component": "Console/discountCouponList",
+        "meta": {
+          "icon": "House",
+          "title": "优惠券列表",
+          "hideMenu": true,
+          "activeMenu": "/console",
+          "isLink": false,
+          "isAffix": false,
+          "isFull": false
+        }
+      }
+    ]
+  },
+  {
+    "path": "/cloud",
+    "name": "Cloud",
+    "component": "Cloud/index",
+    "meta": {
+      "icon": "MostlyCloudy",
+      "title": "算力服务器",
+      "hideMenu": false,
+      "activeMenu": "",
+      "isLink": false,
+      "isAffix": false,
+      "isFull": false
+    },
+    "children": [
+      {
+        "path": "/cloud/resource",
+        "name": "CloudResource",
+        "component": "Cloud/resource/index",
+        "meta": {
+          "title": "资源概览",
+          "hideMenu": false,
+          "activeMenu": ""
+        }
+      },
+      {
+        "path": "/cloud/gpuInstance",
+        "name": "CloudGpuInstance",
+        "component": "Cloud/InstanceList/index",
+        "meta": {
+          "title": "GPU实例列表",
+          "hideMenu": false,
+          "activeMenu": ""
+        }
+      },
+      {
+        "path": "/cloud/instance",
+        "name": "CloudExample",
+        "component": "Cloud/instance/index",
+        "meta": {
+          "title": "实例",
+          "hideMenu": false,
+          "activeMenu": ""
+        },
+        "children": [
+          {
+            "path": "/cloud/createInstance",
+            "name": "createInstance",
+            "component": "Cloud/createInstance/index",
+            "meta": {
+              "title": "创建实例",
+              "hideMenu": true,
+              "activeMenu": "/cloud",
+              "isLink": false,
+              "isAffix": false,
+              "isFull": false
+            },
+            "children": [
+              {
+                "path": "/cloud/instancePay",
+                "name": "instancePay",
+                "component": "Cloud/instancePay/index",
+                "meta": {
+                  "title": "支付订单",
+                  "hideMenu": true,
+                  "activeMenu": "/cloud",
+                  "isLink": false,
+                  "isAffix": false,
+                  "isFull": false
+                }
+              }
+            ]
+          },
+          {
+            "path": "/cloud/instanceDetail",
+            "name": "instanceDetail",
+            "component": "Cloud/instanceDetail/index",
+            "meta": {
+              "title": "实例详情",
+              "hideMenu": true,
+              "activeMenu": "/cloud",
+              "isLink": false,
+              "isAffix": false,
+              "isFull": false
+            }
+          }
+        ]
+      },
+      {
+        "path": "/cloud/mirror",
+        "name": "CloudMirror",
+        "component": "Cloud/imageManagement/index",
+        "meta": {
+          "title": "镜像管理",
+          "hideMenu": false,
+          "activeMenu": ""
+        }
+      }
+    ]
+  },
+  {
+    "path": "/containerConsole",
+    "name": "ContainerConsole",
+    "meta": { "icon": "Operation", "title": "容器控制台","hideMenu":false },
+    "children": [
+      {
+        "path": "/resourcesOverview",
+        "name": "ResourcesOverview",
+        "component": "ContainerConsole/resourcesOverview/index",
+        "meta": { "title": "资源概览",  "hideMenu": true }
+      },
+      {
+        "path": "/cloud/instanceList",
+        "name": "InstanceList",
+        "component": "Cloud/InstanceList/index",
+        "meta": {
+          "title": "容器实例",
+          "hideMenu": true,
+          "activeMenu": "/containerConsole"
+        }
+      },
+      {
+        "path": "/containerList",
+        "name": "ContainerList",
+        "component": "ContainerConsole/containerList/index",
+        "meta": { "title": "容器列表" }
+      },
+      {
+        "path": "/containerDetails",
+        "name": "ContainerDetails",
+        "component": "ContainerConsole/containerList/containerDetails",
+        "meta": {
+          "title": "容器详情",
+          "activeMenu": "/containerList",
+          "hideMenu": true
+        }
+      },
+      {
+        "path": "/createCluster",
+        "name": "CreateCluster",
+        "component": "ContainerConsole/containerList/createCluster",
+        "meta": {
+          "title": "创建集群",
+          "activeMenu": "/containerList",
+          "hideMenu": true
+        }
+      },
+      {
+        "path": "/ContainerConsole/containerPay",
+        "name": "payCluster",
+        "component": "ContainerConsole/containerPay/index",
+        "meta": {
+          "title": "支付控制台",
+          "activeMenu": "/containerList",
+          "hideMenu": true
+        }
+      },
+      {
+        "path": "/mirrorWarehouse",
+        "name": "mirrorWarehouse",
+        "component": "ContainerConsole/mirrorWarehouse/index",
+        "meta": { "title": "镜像仓库" }
+      },
+      {
+        "path": "/createMirrorInstance",
+        "name": "CreateMirrorInstance",
+        "component": "ContainerConsole/mirrorWarehouse/createInstance",
+        "meta": {
+          "title": "创建实例",
+          "activeMenu": "/mirrorWarehouse",
+          "hideMenu": true
+        }
+      },
+      {
+        "path": "/payMirrorInstance",
+        "name": "payMirrorInstance",
+        "component": "ContainerConsole/mirrorWarehouse/payControl/index",
+        "meta": {
+          "title": "支付控制台",
+          "activeMenu": "/mirrorWarehouse",
+          "hideMenu": true
+        }
+      },
+      {
+        "path": "/mirrorInstance",
+        "name": "mirrorInstance",
+        "component": "ContainerConsole/mirrorWarehouse/mirrorInstance",
+        "meta": {
+          "title": "实例详情",
+          "activeMenu": "/mirrorWarehouse",
+          "hideMenu": true
+        }
+      }
+    ]
+  },
+
+  {
+    "path": "/accountManagement",
+    "name": "AccountManagement",
+    "component": "",
+    "meta": {
+      "icon": "User",
+      "title": "账户管理"
+    },
+    "children": [
+      {
+        "path": "/accountCenter",
+        "name": "AccountCenter",
+        "component": "AccountManagement/accountCenter/index",
+        "meta": { "title": "账户中心" }
+      },
+      {
+        "path": "/rechargeCenter",
+        "name": "RechargeCenter",
+        "component": "AccountManagement/rechargeCenter/index",
+        "meta": { "title": "充值中心" }
+      },
+      {
+        "path": "/voucherCollectionCenter",
+        "name": "VoucherCollectionCenter",
+        "component": "AccountManagement/voucherCollectionCenter/index",
+        "meta": { "title": "领券中心" }
+      },
+      {
+        "path": "/authenticationCenter",
+        "name": "AuthenticationCenter",
+        "component": "AccountManagement/authenticationCenter/index",
+        "meta": { "title": "实名认证" }
+      }
+    ]
+  },
+  {
+    "path": "/expenseBill",
+    "name": "ExpenseBill",
+    "component": "ExpenseBill/index",
+    "meta": { "icon": "Postcard", "title": "费用账单", "hideMenu": false }
+  },
+  {
+    "path": "/order",
+    "name": "Order",
+    "component": "Order/index",
+    "meta": { "icon": "Document", "title": "订单管理", "hideMenu": false },
+    "children": [
+      {
+        "path": "/orderDetails",
+        "name": "OrderDetails",
+        "component": "Order/orderDetails",
+        "meta": {
+          "activeMenu": "/order",
+          "title": "订单详情",
+          "hideMenu": true
+        }
+      }
+    ]
+  },
+  {
+    "path": "/aigcOrder",
+    "name": "aigcOrder",
+    "component": "aigcOrder/index",
+    "meta": { "icon": "Document", "title": "AGI-C管理", "hideMenu": false }
+    
+  },
+  {
+    "path": "/storage",
+    "name": "Storage",
+    "component": "",
+    "meta": { "icon": "Coin", "title": "存储控制台", "hideMenu": false },
+
+    "children": [
+      {
+        "path": "/objectStorage",
+        "name": "objectStorage",
+        "component": "storage/object/index",
+        "meta": { "title": "对象存储" }
+      },
+      {
+        "path": "/createBucket",
+        "name": "createBucket",
+        "component": "storage/createBucket/index",
+        "meta": {
+          "title": "创建存储桶",
+          "hideMenu": true,
+          "activeMenu": "/object"
+        }
+      },
+      {
+        "path": "/storageDetail",
+        "name": "storageDetail",
+        "component": "storage/detail/index",
+        "meta": {
+          "title": "存储桶详情",
+          "activeMenu": "/object",
+          "hideMenu": true
+        },
+        
+        "children": [
+          {
+            "path": "/storageDetail/upload",
+            "name": "uploadFolder",
+            "component": "storage/upload/index",
+            "meta": {
+              "title": "上传文件",
+              "activeMenu": "/object",
+              "hideMenu": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/contractManagement",
+    "name": "ContractManagement",
+    "component": "ContractManagement/index",
+    "meta": { "icon": "Notebook", "title": "合同管理" ,"hideMenu":false},
+    "children": [
+      {
+        "path": "/contractManagement/applyForAContract",
+        "name": "ApplyForAContract",
+        "component": "ContractManagement/applyForAContract",
+        "meta": {
+          "activeMenu": "/contractManagement",
+          "title": "申请合同",
+          "hideMenu": true
+        }
+      }
+    ]
+  }, 
+  {
+    "path": "/payControl",
+    "name": "payControl",
+    "component": "payControl/index",
+    "meta": { "icon": "payControl", "title": "支付控制台" ,"hideMenu":true}
+  
+  },
+  {
+    "path": "/popularize",
+    "name": "popularize",
+    "component": "",
+    "meta": { "icon": "Menu", "title": "推广管理" },
+    "children": [
+      {
+        "path": "/popularize/customerManagement",
+        "name": "customerManagement",
+        "component": "popularize/customerManagement",
+        "meta": {
+          "title": "推广客户"
+        }
+      }, {
+        "path": "/popularize/rebateManagement",
+        "name": "rebateManagement",
+        "component": "popularize/rebateManagement",
+        "meta": {
+          "title": "返佣订单"
+        }
+      }, {
+        "path": "/popularize/incomeManagement",
+        "name": "incomeManagement",
+        "component": "popularize/incomeManagement",
+        "meta": {
+          "title": "收入结算"
+        }
+      }
+      
+    ]
+  }
+]

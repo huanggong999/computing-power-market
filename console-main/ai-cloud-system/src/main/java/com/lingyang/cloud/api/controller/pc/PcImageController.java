@@ -25,13 +25,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 @Tag(name = "pc端-镜像管理")
 @RestController
 @RequestMapping("/pc/image")
 @Slf4j
 public class PcImageController {
+
+    private static final int MAX_CUSTOM_IMAGES = 10;
 
     @Resource
     private SysCustomerCreateImageLogMapper sysCustomerCreateImageLogMapper;
@@ -53,7 +57,51 @@ public class PcImageController {
     @PostMapping("/mine/push-command")
     public Result<JSONObject> pushCommand(@RequestBody Map<String, Object> request) {
         GpuPodTenantProvider.Tenant tenant = gpuPodTenantProvider.getCurrentTenant();
+        JSONObject currentImages = gpuPodApiClient.listMyImages(tenant.tenantId());
+        if (currentImages == null
+                || !Boolean.TRUE.equals(currentImages.getBoolean("success"))
+                || Boolean.TRUE.equals(currentImages.getBoolean("degraded"))) {
+            return Result.error("暂时无法校验自定义镜像数量，请稍后重试");
+        }
+        if (isCustomImageLimitReached(currentImages)) {
+            return Result.error("自定义镜像最多只能上传10个，请先删除已有镜像后再试");
+        }
         return Result.success(gpuPodApiClient.getMyImagePushCommand(tenant.tenantId(), request));
+    }
+
+    /**
+     * 校验当前租户的自定义镜像仓库数量。上传实际通过 Docker push 完成，
+     * 因此必须在生成上传命令的后端入口再次校验，避免绕过前端限制。
+     */
+    private boolean isCustomImageLimitReached(JSONObject imageResult) {
+        if (imageResult == null) {
+            return false;
+        }
+        Object images = imageResult.get("images");
+        if (!(images instanceof List<?> imageList)) {
+            return false;
+        }
+        Set<String> repositories = new HashSet<>();
+        for (Object image : imageList) {
+            if (image instanceof JSONObject imageObject) {
+                String repo = imageObject.getString("repo");
+                if (repo == null || repo.isBlank()) {
+                    repo = imageObject.getString("image");
+                    if (repo != null) {
+                        int tagSeparator = repo.lastIndexOf(':');
+                        if (tagSeparator > repo.lastIndexOf('/')) {
+                            repo = repo.substring(0, tagSeparator);
+                        }
+                    }
+                }
+                if (repo != null && !repo.isBlank()) {
+                    repositories.add(repo);
+                }
+            } else if (image != null) {
+                repositories.add(String.valueOf(image));
+            }
+        }
+        return repositories.size() >= MAX_CUSTOM_IMAGES;
     }
 
     @Operation(summary = "获取我的镜像下载命令")

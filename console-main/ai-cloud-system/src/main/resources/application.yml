@@ -18,6 +18,15 @@ spring:
       max-request-size: 1024MB
   messages:
     encoding: UTF-8
+
+# GPU 市场用户端隐藏地区，可按部署环境覆盖；支持 YAML 列表。
+gpu:
+  market:
+    hidden-regions: []
+  scheduler:
+    # 火山云目录缓存，避免官网每次打开都串行请求多个上游接口。
+    catalog-cache-ttl-seconds: 300
+    catalog-cache-key-prefix: "gpu:market:catalog:"
 # ===== SpringDoc配置 =====#
 springdoc:
   swagger-ui:

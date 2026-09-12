@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# ux-admin-main 启停脚本
+# 用法: ./app {start|stop|restart|status|logs}
+
+set -eu
+
+cd "$(dirname "$0")"
+DEPLOY_HOME="$(pwd)"
+
+APP_NAME="ux-admin-main"
+ENV_FILE="${DEPLOY_HOME}/.env"
+LOG_DIR="${DEPLOY_HOME}/logs"
+PID_FILE="${DEPLOY_HOME}/${APP_NAME}.pid"
+SERVER_FILE="${DEPLOY_HOME}/server.cjs"
+
+mkdir -p "${LOG_DIR}"
+
+is_running() {
+  [ -f "${PID_FILE}" ] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null
+}
+
+cmd_start() {
+  if is_running; then
+    echo "[WARN] ${APP_NAME} 已在运行 (pid=$(cat "${PID_FILE}"))"
+    exit 0
+  fi
+  if [ ! -f "${SERVER_FILE}" ]; then
+    echo "[ERROR] server.cjs 不存在,先执行 ./install.sh"
+    exit 1
+  fi
+  if [ ! -f "${ENV_FILE}" ]; then
+    echo "[ERROR] .env 不存在,先执行 ./install.sh 或手动创建"
+    exit 1
+  fi
+
+  # 加载 .env (允许 # 注释、= 两边可以有空格)
+  set -a
+  # shellcheck disable=SC1090
+  . "${ENV_FILE}"
+  set +a
+
+  PORT="${PORT:-5180}"
+  HOST="${HOST:-0.0.0.0}"
+  BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:8082}"
+
+  nohup env PORT="${PORT}" HOST="${HOST}" BACKEND_URL="${BACKEND_URL}" \
+    node "${SERVER_FILE}" \
+    > "${LOG_DIR}/stdout.log" 2>&1 &
+
+  echo "$!" > "${PID_FILE}"
+
+  echo "[OK] ${APP_NAME} 已启动 (pid=$!)"
+  echo "     listen   : ${HOST}:${PORT}"
+  echo "     backend  : ${BACKEND_URL}"
+  echo "     stdout   : ${LOG_DIR}/stdout.log"
+}
+
+cmd_stop() {
+  if [ ! -f "${PID_FILE}" ]; then
+    echo "[INFO] ${APP_NAME} 未运行"
+    return 0
+  fi
+  PID=$(cat "${PID_FILE}")
+  if ! kill -0 "${PID}" 2>/dev/null; then
+    rm -f "${PID_FILE}"
+    return 0
+  fi
+  echo "[INFO] 停止 pid=${PID}"
+  kill "${PID}" || true
+  for _ in $(seq 1 15); do
+    if ! kill -0 "${PID}" 2>/dev/null; then
+      rm -f "${PID_FILE}"
+      echo "[OK] 已停止"
+      return 0
+    fi
+    sleep 1
+  done
+  echo "[WARN] 优雅停止超时,SIGKILL"
+  kill -9 "${PID}" || true
+  rm -f "${PID_FILE}"
+}
+
+cmd_restart() { cmd_stop; cmd_start; }
+
+cmd_status() {
+  if is_running; then
+    PORT_VAL=$(grep -E '^PORT=' "${ENV_FILE}" 2>/dev/null | cut -d= -f2 | tr -d '[:space:]"')
+    PORT_VAL=${PORT_VAL:-5180}
+    echo "[OK] ${APP_NAME} 运行中 (pid=$(cat "${PID_FILE}"), port=${PORT_VAL})"
+  else
+    echo "[INFO] ${APP_NAME} 未运行"
+    exit 3
+  fi
+}
+
+cmd_logs() {
+  [ -f "${LOG_DIR}/stdout.log" ] || { echo "[INFO] 暂无日志"; exit 0; }
+  tail -f "${LOG_DIR}/stdout.log"
+}
+
+case "${1:-}" in
+  start)   cmd_start ;;
+  stop)    cmd_stop ;;
+  restart) cmd_restart ;;
+  status)  cmd_status ;;
+  logs)    cmd_logs ;;
+  *)
+    echo "用法: $0 {start|stop|restart|status|logs}"
+    exit 2
+    ;;
+esac

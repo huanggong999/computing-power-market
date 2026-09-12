@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# ai-cloud-system 启动控制脚本
+# 用法： ./ai-cloud-system {start|stop|restart|status|logs}
+#
+# 目录约定（与 deploy/ 同级）：
+#   bin/   本脚本所在目录
+#   lib/   存放 ai-cloud-system.jar
+#   config/ 外置 application-*.yml（可选，会覆盖 jar 内同名配置）
+#   logs/  运行日志和 stdout
+
+set -eu
+
+cd "$(dirname "$0")/.."
+DEPLOY_HOME="$(pwd)"
+
+APP_NAME="ai-cloud-system"
+JAR_FILE="${DEPLOY_HOME}/lib/${APP_NAME}.jar"
+CONFIG_DIR="${DEPLOY_HOME}/config"
+LOG_DIR="${DEPLOY_HOME}/logs"
+PID_FILE="${DEPLOY_HOME}/${APP_NAME}.pid"
+
+PROFILE="${PROFILE:-prod}"
+SERVER_PORT="${SERVER_PORT:-8082}"
+JAVA_OPTS="${JAVA_OPTS:--server -Xms1g -Xmx2g -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${LOG_DIR}/heapdump.hprof -Dfile.encoding=UTF-8}"
+
+mkdir -p "${LOG_DIR}"
+
+is_running() {
+  [ -f "${PID_FILE}" ] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null
+}
+
+cmd_start() {
+  if [ ! -f "${JAR_FILE}" ]; then
+    echo "[ERROR] jar 不存在：${JAR_FILE}"
+    echo "        请先在开发机执行："
+    echo "          cd lingyang-common && mvn clean install"
+    echo "          cd ai-cloud-system && mvn clean package"
+    echo "        然后把 target/${APP_NAME}.jar 复制到 ${DEPLOY_HOME}/lib/"
+    exit 1
+  fi
+
+  if is_running; then
+    echo "[WARN] ${APP_NAME} 已在运行 (pid=$(cat "${PID_FILE}"))，如需重启请使用 restart"
+    exit 0
+  fi
+
+  # config/ 下的 application-*.yml 会覆盖 jar 内同名配置
+  nohup java ${JAVA_OPTS} \
+    -Dspring.profiles.active="${PROFILE}" \
+    -Dspring.config.additional-location="file:${CONFIG_DIR}/" \
+    -Dserver.port="${SERVER_PORT}" \
+    -jar "${JAR_FILE}" \
+    > "${LOG_DIR}/stdout.log" 2>&1 &
+
+  echo "$!" > "${PID_FILE}"
+
+  echo "[OK] ${APP_NAME} 已启动 (pid=$!)"
+  echo "     profile=${PROFILE}"
+  echo "     port=${SERVER_PORT}"
+  echo "     jar=${JAR_FILE}"
+  echo "     stdout=${LOG_DIR}/stdout.log"
+}
+
+cmd_stop() {
+  if [ ! -f "${PID_FILE}" ]; then
+    echo "[INFO] 未发现 pid 文件，${APP_NAME} 可能未运行"
+    return 0
+  fi
+
+  PID=$(cat "${PID_FILE}")
+  if ! kill -0 "${PID}" 2>/dev/null; then
+    echo "[INFO] 进程 ${PID} 已不存在，清理 pid 文件"
+    rm -f "${PID_FILE}"
+    return 0
+  fi
+
+  echo "[INFO] 发送 SIGTERM 给 pid=${PID}（最多等待 30s）"
+  kill "${PID}"
+  for _ in $(seq 1 30); do
+    if ! kill -0 "${PID}" 2>/dev/null; then
+      rm -f "${PID_FILE}"
+      echo "[OK] ${APP_NAME} 已停止"
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "[WARN] 优雅停止超时，发送 SIGKILL"
+  kill -9 "${PID}" || true
+  rm -f "${PID_FILE}"
+  echo "[OK] ${APP_NAME} 已强制停止"
+}
+
+cmd_restart() {
+  cmd_stop
+  cmd_start
+}
+
+cmd_status() {
+  if is_running; then
+    PID=$(cat "${PID_FILE}")
+    echo "[OK] ${APP_NAME} 正在运行 (pid=${PID}, port=${SERVER_PORT})"
+  else
+    echo "[INFO] ${APP_NAME} 未运行"
+    exit 3
+  fi
+}
+
+cmd_logs() {
+  if [ ! -f "${LOG_DIR}/stdout.log" ]; then
+    echo "[INFO] 暂无日志文件"
+    exit 0
+  fi
+  tail -f "${LOG_DIR}/stdout.log"
+}
+
+case "${1:-}" in
+  start)   cmd_start ;;
+  stop)    cmd_stop ;;
+  restart) cmd_restart ;;
+  status)  cmd_status ;;
+  logs)    cmd_logs ;;
+  *)
+    echo "用法: $0 {start|stop|restart|status|logs}"
+    exit 2
+    ;;
+esac

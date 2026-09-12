@@ -22,6 +22,12 @@
         <if test="query.regionCode != null and query.regionCode != ''">
             AND gr.region_code = #{query.regionCode}
         </if>
+        <if test="query.excludedRegionCodes != null and query.excludedRegionCodes.size() > 0">
+            AND LOWER(gr.region_code) NOT IN
+            <foreach collection="query.excludedRegionCodes" item="regionCode" open="(" separator="," close=")">
+                LOWER(#{regionCode})
+            </foreach>
+        </if>
         <if test="query.zoneCode != null and query.zoneCode != ''">
             AND gr.zone_code = #{query.zoneCode}
         </if>
@@ -70,6 +76,12 @@
         </if>
         <if test="query.regionCode != null and query.regionCode != ''">
             AND gr.region_code = #{query.regionCode}
+        </if>
+        <if test="query.excludedRegionCodes != null and query.excludedRegionCodes.size() > 0">
+            AND LOWER(gr.region_code) NOT IN
+            <foreach collection="query.excludedRegionCodes" item="regionCode" open="(" separator="," close=")">
+                LOWER(#{regionCode})
+            </foreach>
         </if>
         <if test="query.zoneCode != null and query.zoneCode != ''">
             AND gr.zone_code = #{query.zoneCode}

@@ -1,0 +1,187 @@
+.top-card {
+  position: relative;
+  display: grid;
+  height: 60px;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+
+  .invite-card {
+    height: 60px;
+    img {
+      width: 100%;
+      height: 100%;
+    }
+    .btn {
+      position: absolute;
+      top: 25%;
+      left: 94%;
+    }
+  }
+}
+.alert {
+  width: 100%;
+  border-radius: 10px;
+  padding: 18px;
+  padding-left: 40px;
+  background: linear-gradient(86deg, #fef0f0 0%, rgba(255, 255, 255, 0) 100%);
+  position: relative;
+  &::before {
+    left: 20px;
+  }
+}
+.helpCenter {
+  height: 210px;
+  background: url('@/assets/userSideImage/helpCenterBg.png') no-repeat;
+  background-size: 100% 100%;
+  border-radius: 10px;
+  padding: 28px 11px 28px 24px;
+  .text {
+    .icon {
+      width: 28px;
+      height: 28px;
+      padding: 2px;
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+    }
+    .quickStartIcon {
+      background-image: url('@/assets/userSideImage/quickStartIcon.png');
+    }
+    .questionIcon {
+      background-image: url('@/assets/userSideImage/questionIcon.png');
+    }
+  }
+}
+.accountCenter {
+  background: url('@/assets/userSideImage/accountCenterBg.png') no-repeat;
+  height: 150px;
+  background-size: 100% 100%;
+  position: relative;
+  .btn {
+    position: absolute;
+    bottom: 20px;
+    left: 24px;
+  }
+}
+.service {
+  height: 270px;
+  padding: 26px 40px;
+  background-color: #fff;
+  border-radius: 10px;
+  text-align: center;
+  .code {
+    width: 200px;
+    height: 200px;
+  }
+}
+.partnerDialog {
+  position: absolute;
+  top: 0;
+  width: 930px;
+  height: 680px;
+  background: #ffffff;
+  border-radius: 8px 8px 8px 8px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 111;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 22px 24px;
+
+  .form-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    width: 100%;
+    ::v-deep .el-form-item {
+      display: flex;
+      flex-direction: column;
+
+      .el-form-item__label {
+        font-weight: 400;
+        font-size: 16px;
+        display: block;
+      }
+      .el-form-item__content {
+        width: 100%;
+        border-radius: 4px 4px 4px 4px;
+        border: 1px solid #d9d9d9;
+        border: 0;
+      }
+    }
+  }
+
+  .title {
+    font-weight: 500;
+    font-size: 24px;
+  }
+  .gray-card {
+    width: 880px;
+    height: 610px;
+    background: #f7f8fb;
+    border-radius: 8px 8px 8px 8px;
+    padding: 20px 24px;
+    overflow: auto;
+    white-space: pre-line;
+    font-weight: 400;
+    font-size: 18px;
+  }
+  .footer {
+    width: 100%;
+
+    .check-text {
+      font-weight: 400;
+      font-size: 16px;
+      color: #666666;
+    }
+    .el-button {
+      margin-left: auto;
+      width: 220px;
+      height: 40px;
+      border-radius: 4px 4px 4px 4px;
+    }
+  }
+  .tip {
+    font-weight: 400;
+    font-size: 16px;
+  }
+}
+.success-dialog {
+  .content {
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 22px;
+    img {
+      width: 72px;
+      height: 72px;
+    }
+    .title {
+      font-weight: 500;
+      font-size: 20px;
+    }
+    .value {
+      font-weight: 400;
+      font-size: 16px;
+    }
+    .btns {
+      .el-button {
+        width: 118px;
+        height: 42px;
+        border-radius: 4px 4px 4px 4px;
+      }
+    }
+  }
+}
+.mask {
+  position: fixed; /* 固定定位，确保遮罩层覆盖整个页面 */
+  top: 0; /* 从页面顶部开始 */
+  left: 0; /* 从页面左边开始 */
+  width: 100vw; /* 宽度占满整个视口 */
+  height: 100vh; /* 高度占满整个视口 */
+  background-color: rgba(0, 0, 0, 0.5); /* 半透明黑色背景 */
+  z-index: 101; /* 确保遮罩层在最上层 */
+}

@@ -1,0 +1,74 @@
+.object {
+  .tips {
+    position: absolute;
+    top: 130px;
+    left: 1840px;
+    font-weight: 400;
+    font-size: 18px;
+    color: #3972fd;
+  }
+  .check {
+    font-weight: 500;
+    font-size: 16px;
+    color: #3972fd;
+    &:hover {
+      cursor: pointer;
+    }
+  }
+  .container {
+    z-index: 3;
+    display: grid;
+    grid-template-rows: 32px 1fr 74px;
+    padding: 26px 24px 0 24px;
+    background: #ffffff;
+    border-radius: 10px 10px 10px 10px;
+    height: 100%;
+  }
+  .searchBar {
+    display: flex;
+    gap: 10px;
+
+    .el-input {
+      width: 260px;
+    }
+    .el-button {
+      margin: 0px;
+    }
+    .export-btn {
+      border: #3972fd 1px solid;
+      color: #3972fd;
+    }
+  }
+  .handle {
+    gap: 24px;
+    .text-button {
+      font-weight: 500;
+      font-size: 16px;
+      &:hover {
+        cursor: pointer;
+      }
+    }
+  }
+  .footer {
+    display: flex;
+    gap: 10px;
+    height: 76px;
+    .choose {
+      font-weight: 400;
+      font-size: 16px;
+      color: #666666;
+      .num {
+        font-weight: 600;
+        font-size: 16px;
+        color: #3972fd;
+      }
+    }
+    .el-button {
+      height: 32px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0px;
+    }
+  }
+}

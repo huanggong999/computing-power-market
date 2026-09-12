@@ -9,6 +9,9 @@ import lombok.Data;
 @Data
 public class GpuPodCreateResponse {
 
+    /** 兼容部分网关返回的 {status, body} 包装结构。 */
+    private GpuPodCreateResponse body;
+
     /**
      * 是否成功
      */
@@ -46,7 +49,7 @@ public class GpuPodCreateResponse {
     /**
      * 计费信息
      */
-    @JsonAlias("billing_info")
+    @JsonAlias({"billing_info", "pricing"})
     private BillingInfo billingInfo;
 
     /**
