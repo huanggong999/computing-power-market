@@ -22,4 +22,7 @@ public class GpuResourceQueryParam {
     private Integer status;
     private Integer pageNo;
     private Integer pageSize;
+
+    /** 后端配置的隐藏地区，供市场 SQL 查询排除。 */
+    private List<String> excludedRegionCodes;
 }

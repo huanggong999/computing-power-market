@@ -350,6 +350,13 @@ public class SystemGpuResourceController {
         return Result.success(gpuSchedulerApiClient.getMonitorOverview());
     }
 
+    @GetMapping("/volcano/catalog")
+    @Operation(summary = "火山云 GPU 目录")
+    @Log(value = "火山云 GPU 目录", businessType = BusinessType.GET)
+    public Result<JSONObject> volcanoGpuCatalog() {
+        return Result.success(gpuSchedulerApiClient.getGpuCatalog());
+    }
+
     @GetMapping("/cluster/node/page")
     @Operation(summary = "GPU集群节点分页列表")
     @Log(value = "GPU集群节点分页列表", businessType = BusinessType.GET)

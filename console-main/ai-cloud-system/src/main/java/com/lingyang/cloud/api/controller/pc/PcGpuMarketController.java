@@ -6,6 +6,8 @@ import com.lingyang.cloud.entity.GpuResourcePriceEntity;
 import com.lingyang.cloud.entity.GpuResourceSpecEntity;
 import com.lingyang.cloud.entity.GpuResourceStockEntity;
 import com.lingyang.cloud.entity.GpuZoneEntity;
+import com.lingyang.cloud.client.GpuSchedulerApiClient;
+import com.lingyang.cloud.config.GpuMarketProperties;
 import com.lingyang.cloud.mapper.GpuResourcePriceMapper;
 import com.lingyang.cloud.mapper.GpuResourceStockMapper;
 import com.lingyang.cloud.model.dto.GpuResourceQueryParam;
@@ -62,6 +64,12 @@ public class PcGpuMarketController {
     @Resource
     private GpuResourcePriceMapper gpuResourcePriceMapper;
 
+    @Resource
+    private GpuSchedulerApiClient gpuSchedulerApiClient;
+
+    @Resource
+    private GpuMarketProperties gpuMarketProperties;
+
     /**
      * GPU资源列表
      */
@@ -109,6 +117,7 @@ public class PcGpuMarketController {
 
         queryParam.setGpuModels(gpuModels);
         queryParam.setStatus(1);
+        queryParam.setExcludedRegionCodes(gpuMarketProperties.getHiddenRegions());
 
         return Result.success(gpuResourceService.getMarketList(queryParam, pageQuery));
     }
@@ -123,6 +132,9 @@ public class PcGpuMarketController {
         GpuMarketMetaVO metaVO = new GpuMarketMetaVO();
 
         List<com.lingyang.cloud.entity.GpuResourceEntity> listedResources = gpuResourceService.listListedMarketResources();
+        listedResources = listedResources.stream()
+                .filter(resource -> !gpuMarketProperties.isHiddenRegion(resource.getRegionCode()))
+                .toList();
         Set<String> regionCodes = listedResources.stream()
                 .map(com.lingyang.cloud.entity.GpuResourceEntity::getRegionCode)
                 .filter(code -> code != null && !code.isEmpty())
@@ -187,6 +199,17 @@ public class PcGpuMarketController {
     }
 
     /**
+     * 官网只读展示火山云 GPU 目录，不进入当前平台下单资源列表。
+     */
+    @GetMapping("/volcano/catalog")
+    @Operation(summary = "火山云 GPU 目录（官网展示）")
+    @PreAuthorize("permitAll()")
+    public Result<com.alibaba.fastjson2.JSONObject> volcanoCatalog(
+            @RequestParam(required = false) @Parameter(description = "计费方式 monthly/on_demand/hourly") String billingType) {
+        return Result.success(gpuSchedulerApiClient.getCachedGpuCatalog(billingType));
+    }
+
+    /**
      * GPU资源详情
      */
     @GetMapping("/detail/{resourceId}")
@@ -194,7 +217,8 @@ public class PcGpuMarketController {
     @PreAuthorize("permitAll()")
     public Result<GpuResourceDetailVO> detail(@PathVariable Long resourceId) {
         GpuResourceEntity resource = gpuResourceService.getById(resourceId);
-        if (resource == null || resource.getStatus() == null || resource.getStatus() != 1) {
+        if (resource == null || resource.getStatus() == null || resource.getStatus() != 1
+                || gpuMarketProperties.isHiddenRegion(resource.getRegionCode())) {
             return Result.success(null);
         }
 

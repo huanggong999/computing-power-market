@@ -1,0 +1,91 @@
+.model-page {
+  min-height: 100vh;
+  margin-bottom: -50px;
+  padding-bottom: 120px;
+  position: relative;
+  background: #f7f8fb;
+  border-radius: margin 0px 0px 0px 0px;
+  display: grid;
+  margin-top: 100px;
+  box-sizing: border-box;
+  grid-template-columns: 328px 1fr 350px;
+  padding-top: 24px;
+  .left {
+    padding: 0px 26px 0px 26px;
+    border-right: 1px solid rgb(221, 220, 220);
+    .search-part {
+      display: flex;
+      gap: 10px;
+      .el-input {
+        width: 276px;
+        height: 38px;
+      }
+      .el-button {
+        height: 38px;
+      }
+    }
+
+    .el-tree {
+      background-color: #00000000;
+      ::v-deep .el-tree-node__content {
+        // padding: 13px 10px 13px 6px !important;
+        margin-bottom: 13px;
+      }
+      ::v-deep .el-tree-node__label {
+        font-size: 16px;
+      }
+      // 选中样式
+      .selected {
+        color: #3972fd !important;
+      }
+      // ::v-deep .el-tree-node .is-current .el-tree-node__content {
+      //   background: rgba(0, 229, 255, 0.5) !important;
+      //   color: red !important;
+      // }
+    }
+  }
+  .middle {
+    padding: 0px 30px 0px;
+    .docs-card {
+      margin-top: 20px;
+      margin-bottom: 27px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      .title {
+        font-weight: 500;
+        font-size: 32px;
+      }
+      .time {
+        font-weight: 400;
+        font-size: 16px;
+        color: #83889d;
+      }
+    }
+  }
+  .right {
+    .el-input {
+      width: 300px;
+      height: 38px;
+    }
+    .catalog {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      .title {
+        font-weight: bold;
+        font-size: 24px;
+      }
+    }
+  }
+  .bg-div {
+    // z-index: -100;
+    position: absolute;
+    top: -120px;
+    width: 1037px;
+    height: 192px;
+    background: radial-gradient(0% 0% at 31% 65%, #45c2d0 0%, #3972fd 100%);
+    opacity: 0.19;
+    filter: blur(30px);
+  }
+}

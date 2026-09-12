@@ -136,7 +136,8 @@ public class GpuPodApiClient {
             HttpEntity<GpuPodCreateRequest> entity = new HttpEntity<>(request, createHeaders());
             ResponseEntity<GpuPodCreateResponse> response = restTemplate.exchange(
                     url, HttpMethod.POST, entity, GpuPodCreateResponse.class);
-            return response.getBody();
+            GpuPodCreateResponse payload = response.getBody();
+            return payload != null && payload.getBody() != null ? payload.getBody() : payload;
         } catch (RestClientResponseException e) {
             log.error(e.getMessage(), e);
             GpuPodCreateResponse response = new GpuPodCreateResponse();

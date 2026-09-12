@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.lingyang.cloud.client.GpuPodApiClient;
 import com.lingyang.cloud.client.GpuPodTenantProvider;
+import com.lingyang.cloud.client.GpuSchedulerApiClient;
 import com.lingyang.cloud.client.config.GpuPodProperties;
 import com.lingyang.cloud.client.dto.GpuPodCreateRequest;
 import com.lingyang.cloud.client.dto.GpuPodCreateResponse;
@@ -66,6 +67,9 @@ public class PcGpuRentController {
 
     @Resource
     private GpuPodApiClient gpuPodApiClient;
+
+    @Resource
+    private GpuSchedulerApiClient gpuSchedulerApiClient;
 
     @Resource
     private GpuPodTenantProvider gpuPodTenantProvider;
@@ -150,12 +154,14 @@ public class PcGpuRentController {
     @Transactional(rollbackFor = Exception.class)
     public Result<GpuRentOrderVO> order(@RequestBody GpuRentOrderDTO dto) {
         //dto = buildMockRentOrderDTO();
-        Result<GpuRentFeeVO> feeResult = calculate(dto);
+        GpuPodCreateRequest request = dto.getPodCreateRequest();
+        Result<GpuRentFeeVO> feeResult = dto.getResourceId() != null && dto.getResourceId() == 0
+                ? calculateExternal(dto, request)
+                : calculate(dto);
         if (feeResult.getData() == null) {
             return Result.error("创建订单失败");
         }
 
-        GpuPodCreateRequest request = dto.getPodCreateRequest();
         if (request == null) {
             return Result.error("GPU Pod 创建参数不能为空");
         }
@@ -196,6 +202,7 @@ public class PcGpuRentController {
         vo.setStatus("processing");
         vo.setTotalAmount(orderFee.getTotal());
         vo.setPaidAmount(orderFee.getTotal());
+        vo.setPricing(toOrderPricing(orderFee, podResponse));
         vo.setCreateTime(now);
 
         GpuRentOrderVO.InstanceInfo instanceInfo = new GpuRentOrderVO.InstanceInfo();
@@ -206,6 +213,50 @@ public class PcGpuRentController {
         instanceInfo.setStatus("creating");
         vo.setInstanceInfo(instanceInfo);
         return Result.success(vo);
+    }
+
+    private Result<GpuRentFeeVO> calculateExternal(GpuRentOrderDTO dto, GpuPodCreateRequest request) {
+        if (request == null || request.getGpuSpec() == null) return Result.error("GPU规格参数不能为空");
+        String billingType = StringUtils.defaultIfBlank(dto.getBillingType(), "hourly");
+        String instanceTypeId = request.getMachineId();
+        if (StringUtils.isBlank(request.getZone())) {
+            request.setZone(StringUtils.defaultIfBlank(request.getRegion(), "default"));
+        }
+        BigDecimal unitPrice = gpuSchedulerApiClient.findGpuPrice(
+                request.getRegion(), request.getGpuSpec().getModel(), request.getGpuSpec().getGpuMemory(),
+                instanceTypeId, billingType);
+        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) return Result.error("价格不存在");
+        int quantity = dto.getQuantity() == null || dto.getQuantity() < 1 ? 1 : dto.getQuantity();
+        int duration = dto.getDuration() == null || dto.getDuration() < 1 ? 1 : dto.getDuration();
+        BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity)).multiply(BigDecimal.valueOf(duration));
+        GpuRentFeeVO vo = new GpuRentFeeVO();
+        vo.setUnitPrice(unitPrice);
+        vo.setQuantity(quantity);
+        vo.setDuration(duration);
+        vo.setSubtotal(subtotal);
+        vo.setDiscount(BigDecimal.ZERO);
+        vo.setTotal(subtotal);
+        return Result.success(vo);
+    }
+
+    private GpuRentOrderVO.Pricing toOrderPricing(GpuRentFeeVO fee, GpuPodCreateResponse response) {
+        GpuRentOrderVO.Pricing pricing = new GpuRentOrderVO.Pricing();
+        GpuPodCreateResponse.BillingInfo billing = response == null ? null : response.getBillingInfo();
+        BigDecimal unitPrice = billing == null || billing.getUnitPrice() <= 0
+                ? fee.getUnitPrice() : BigDecimal.valueOf(billing.getUnitPrice());
+        BigDecimal discountUnitPrice = billing == null || billing.getDiscountUnitPrice() <= 0
+                ? unitPrice : BigDecimal.valueOf(billing.getDiscountUnitPrice());
+        BigDecimal totalCost = billing == null || billing.getTotalCost() <= 0
+                ? fee.getSubtotal() : BigDecimal.valueOf(billing.getTotalCost());
+        BigDecimal discountTotalCost = billing == null || billing.getDiscountTotalCost() <= 0
+                ? fee.getTotal() : BigDecimal.valueOf(billing.getDiscountTotalCost());
+        pricing.setUnitPrice(unitPrice);
+        pricing.setDiscountUnitPrice(discountUnitPrice);
+        pricing.setTotalCost(totalCost);
+        pricing.setDiscountTotalCost(discountTotalCost);
+        pricing.setCurrency(billing == null ? "CNY" : billing.getCurrency());
+        pricing.setUnit(billing == null ? null : billing.getUnit());
+        return pricing;
     }
 
     private GpuRentOrderDTO buildMockRentOrderDTO() {
@@ -280,7 +331,9 @@ public class PcGpuRentController {
         if (isTechnicalCreateError(message)) {
             return "实例创建服务暂时不可用，请稍后重试或联系管理员处理";
         }
-        return message.length() > 80 ? "订单创建失败，请稍后重试或联系管理员处理" : message;
+        // Business failures from the scheduler contain actionable details
+        // (for example the currently available GPU models); show them as-is.
+        return message;
     }
 
     private boolean isTechnicalCreateError(String message) {
@@ -342,6 +395,14 @@ public class PcGpuRentController {
         configDetail.put("podName", podName);
         configDetail.put("podNamespace", podResponse.getPodNamespace());
         configDetail.put("createMessage", podResponse.getMessage());
+        JSONObject pricingSnapshot = new JSONObject();
+        pricingSnapshot.put("unit_price", unitPrice);
+        pricingSnapshot.put("discount_unit_price", discountUnitPrice);
+        pricingSnapshot.put("total_cost", originalPrice);
+        pricingSnapshot.put("discount_total_cost", finalPayAmount);
+        pricingSnapshot.put("currency", "CNY");
+        pricingSnapshot.put("unit", getDurationUnit(dto.getBillingType()).name());
+        configDetail.put("pricing", pricingSnapshot);
 
         String gpuModel = podRequest.getGpuSpec() == null ? "" : podRequest.getGpuSpec().getModel();
         SysOrderSourceEntity source = new SysOrderSourceEntity();

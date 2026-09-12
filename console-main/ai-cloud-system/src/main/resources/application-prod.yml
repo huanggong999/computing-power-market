@@ -1,6 +1,11 @@
 server:
   port: 8082
 
+gpu:
+  market:
+    hidden-regions:
+      - cn-wulanchabu
+
 spring:
   datasource:
 #    url: jdbc:mysql://mysql-73cfcbbc127c-public.rds.volces.com:33060/ai_cloud?useUnicode=true&characterEncoding=utf8
@@ -77,6 +82,8 @@ security:
     - /pc/ai/**
     - /pc/carousel/appletList
     - /pc/customer/getEidResult/**
+    # 官网公开算力市场及火山云 GPU 目录
+    - /pc/gpu/market/**
     - /pc/order/getAlipayForm
     - /pc/customer/bill/test/**
   captcha:
@@ -133,6 +140,8 @@ cache:
 #alipay:
 #  server_url: https://openapi.alipay.com/gateway.do
 #  app_id: 2021005101676006
+#  alipay_public_key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlP+vciQYi/d3IMU1ZzEfyBeNfIKLjVkmxWlRqMft+u1UpzdZoUxTsBFsHnVeKErOz5NqwsngsDQNNwxCoHexVM6EZs1KH+zbENXZTqydOeviO4F/KzWuzxVfMFbKPDXt0ddkXMQdgtrUJKKbRcyLRZuoIuHv2CsEaxVptaRa6jWb8VPOneG8fEasoBM1qiv6PjzIVUBeL51SzcmAkzXTXncm67BNQISZ7Tvx94uR66Ukuc7bXQQBkrAaaIGaXHmH0a3XSvOS0DzeSVUCX2Pj8S3FdRthBHvGsNE3aHknMmW8H5RM1pQklRQqg26AIEZ35LFYjSb7hvOC7tCtiB1A0wIDAQAB
+  private_key: ${ALIPAY_PRIVATE_KEY:}
 #  format: json
 #  charset: utf-8
 #  sign_type: RSA2
@@ -144,7 +153,7 @@ cache:
 alipay:
   server_url: https://openapi.alipay.com/gateway.do
   app_id: 2021005118699843
-  alipay_public_key: ${ALIPAY_PUBLIC_KEY:}
+  alipay_public_key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyuNhNEZtMNIIpmXl9izzmXQVYoemX1PSPZicXnCrRNYzExcc9jcr+g1I0547q4/oMmXpt12tiC2z6VdNekSzrb7+JizyKoE4M9LQnE8HfeuBDUdwx8xGIykoIAgFyMJjt/xpG5ID4QPr9SVt5LdP8RNhHs2lnBudOWqlSuv9CH8LbRGChFYNN96TB/iZB8grepOHMgyvzwG5lCpBxyzgna6mHPNRHz+osi1r/kZXL1qiDkdUEVQb59RT2Cj50e3mBwYQwOKaFY93h6o6srbCm+0Cvz46oU8zc1nJK9Me0gC9/TMvBikgksDYYc4PUilqr77FifCYluh/f1viHKZ2wQIDAQAB
   private_key: ${ALIPAY_PRIVATE_KEY:}
   format: json
   charset: utf-8
@@ -173,7 +182,7 @@ tencent:
     mch_id: 1696103398
     merchant_serial_number: ${TENCENT_PAY_MERCHANT_SERIAL_NUMBER:}
     pay_notify_url: https://eyunai.net/api/apiCallback/onlinePayCallback/wechatPayNotify
-    privateCertPath: ${TENCENT_PAY_PRIVATE_CERT_PATH:}
+    privateCertPath: classPath:cert/apiclient_key.pem
 
 extend:
   shareUrl: https://www.eyun.ai/#/
@@ -188,3 +197,5 @@ feiLian:
   parentDepartmentId: od_2zdykdKwGxgM
 
 # 支付宝企业账户公钥秘钥，支付宝公钥
+# 应用公钥：MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAm8z5tIvNUoYiPsrxGrm9kjLtIN/04Dx1a1WRKxWO38c5Z4wzKPitK18tG7Q6xINXRwae/F0SJanfxoOhkn15ceiE79icajewx5LjW8PJ88S9jU2itQnwv/UywIuzxqVsM9Ba6Xl3bnlIWtd/+atknqzPOj/WD4o1HF6BOxdGLEN/Nhj9QUauMZFd2bXEDj9PMaPCqFFFPDTzSbfzDbbCSgPrMVceUmSynFwaAexHjqVKPk0ik7rm8uy90oPo/U9gLyoqYocbRCH+aSvNw6E/eEvSnr6tAa5MxcAH+uj9VjCPoywq9JAnwVxBJO+lmIfDDCWrXENF916guYdEEps03wIDAQAB
+# 支付宝公钥：MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyuNhNEZtMNIIpmXl9izzmXQVYoemX1PSPZicXnCrRNYzExcc9jcr+g1I0547q4/oMmXpt12tiC2z6VdNekSzrb7+JizyKoE4M9LQnE8HfeuBDUdwx8xGIykoIAgFyMJjt/xpG5ID4QPr9SVt5LdP8RNhHs2lnBudOWqlSuv9CH8LbRGChFYNN96TB/iZB8grepOHMgyvzwG5lCpBxyzgna6mHPNRHz+osi1r/kZXL1qiDkdUEVQb59RT2Cj50e3mBwYQwOKaFY93h6o6srbCm+0Cvz46oU8zc1nJK9Me0gC9/TMvBikgksDYYc4PUilqr77FifCYluh/f1viHKZ2wQIDAQAB

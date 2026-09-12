@@ -88,7 +88,7 @@ springdoc:
 # ===== log4j2配置 =====#
 logging:
   level:
-    com.lingyang.system: debug
+    com.lingyang.system: info
 
 vol-engine:
   access-key: ${VOLC_ACCESS_KEY:}
@@ -114,7 +114,7 @@ cache:
 alipay:
   server_url: https://openapi.alipay.com/gateway.do
   app_id: 2021005101676006
-  alipay_public_key: ${ALIPAY_PUBLIC_KEY:}
+  alipay_public_key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlP+vciQYi/d3IMU1ZzEfyBeNfIKLjVkmxWlRqMft+u1UpzdZoUxTsBFsHnVeKErOz5NqwsngsDQNNwxCoHexVM6EZs1KH+zbENXZTqydOeviO4F/KzWuzxVfMFbKPDXt0ddkXMQdgtrUJKKbRcyLRZuoIuHv2CsEaxVptaRa6jWb8VPOneG8fEasoBM1qiv6PjzIVUBeL51SzcmAkzXTXncm67BNQISZ7Tvx94uR66Ukuc7bXQQBkrAaaIGaXHmH0a3XSvOS0DzeSVUCX2Pj8S3FdRthBHvGsNE3aHknMmW8H5RM1pQklRQqg26AIEZ35LFYjSb7hvOC7tCtiB1A0wIDAQAB
   private_key: ${ALIPAY_PRIVATE_KEY:}
   format: json
   charset: utf-8
@@ -143,7 +143,7 @@ tencent:
     merchant_serial_number: ${TENCENT_PAY_MERCHANT_SERIAL_NUMBER:}
     pay_notify_url: https://eyunai.net/api/apiCallback/onlinePayCallback/wechatPayNotify
     #      refunds_notify_url: https://lxxd.tourzx.cn/api/apiCallback/wechat/refundsNotify
-    privateCertPath: ${TENCENT_PAY_PRIVATE_CERT_PATH:}
+    privateCertPath: classPath:cert/apiclient_key.pem
 
 extend:
   shareUrl: http://115.190.35.186:9100/#/
@@ -167,3 +167,15 @@ gpu-pod:
   admin-auth-key: ${GPU_POD_ADMIN_AUTH_KEY:}
   token-refresh-ahead-seconds: 300
   mock-create-enabled: false
+
+# GPU Scheduler（火山云目录等管理端接口）HTTP 超时，单位毫秒
+gpu:
+  market:
+    hidden-regions:
+      - cn-wulanchabu
+  scheduler:
+    connect-timeout: 20000
+    read-timeout: 20000
+    # 火山云目录缓存，避免开发环境每次打开页面都重复请求上游接口。
+    catalog-cache-ttl-seconds: 86400
+    catalog-cache-key-prefix: "gpu:market:catalog:"

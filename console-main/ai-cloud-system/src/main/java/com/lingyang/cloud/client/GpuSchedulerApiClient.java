@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.lingyang.cloud.config.RestTemplateConfig;
+import com.lingyang.cloud.config.GpuMarketProperties;
 import com.lingyang.cloud.model.query.gpu.GpuClusterNodeQuery;
 import com.lingyang.cloud.model.query.gpu.GpuClusterQuery;
 import com.lingyang.cloud.model.query.gpu.GpuNodePoolQuery;
@@ -16,6 +17,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -33,6 +35,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * GPU Resource Scheduler 后台接口客户端。
@@ -50,11 +54,18 @@ public class GpuSchedulerApiClient {
     @Value("${gpu.scheduler.auth-key:}")
     private String schedulerAuthKey;
 
-    @Value("${gpu.scheduler.connect-timeout:5000}")
+    @Value("${gpu.scheduler.connect-timeout:20000}")
     private Integer connectTimeout;
 
-    @Value("${gpu.scheduler.read-timeout:10000}")
+    @Value("${gpu.scheduler.read-timeout:20000}")
     private Integer readTimeout;
+
+    /** 火山云目录变化频率低，默认缓存 5 分钟，避免每次打开页面都请求三个上游接口。 */
+    @Value("${gpu.scheduler.catalog-cache-ttl-seconds:300}")
+    private long catalogCacheTtlSeconds;
+
+    @Value("${gpu.scheduler.catalog-cache-key-prefix:gpu:market:catalog:}")
+    private String catalogCacheKeyPrefix;
 
     private RestTemplate restTemplate;
 
@@ -63,6 +74,15 @@ public class GpuSchedulerApiClient {
 
     @Resource
     private GpuPodTenantProvider tenantProvider;
+
+    @Resource
+    private GpuMarketProperties gpuMarketProperties;
+
+    @Resource
+    private RedisTemplate<Object, Object> redisTemplate;
+
+    /** 同一实例首次加载时只允许一个请求访问上游，其他请求复用刚写入的缓存。 */
+    private final Object catalogCacheLock = new Object();
 
     @PostConstruct
     public void init() {
@@ -157,6 +177,437 @@ public class GpuSchedulerApiClient {
             empty.put("clusters", new JSONArray());
             return empty;
         }
+    }
+
+    /**
+     * 获取并合并火山云 GPU 数据。
+     *
+     * <p>调度器分别提供完整规格目录和实时可用资源，后台统一请求后按
+     * 地域、GPU 型号、显存和实例规格合并，前端只需要调用当前系统接口。</p>
+     */
+    public JSONObject getGpuCatalog() {
+        return getGpuCatalog(null);
+    }
+
+    /**
+     * 获取并合并 GPU 目录，可按当前计费方式过滤无价实例。
+     * billingType 为空时保留完整目录（供目录管理等场景使用）。
+     */
+    public JSONObject getGpuCatalog(String billingType) {
+        return loadGpuCatalogFromScheduler(billingType);
+    }
+
+    /**
+     * 官网展示目录允许短时间缓存；下单价格校验仍调用 getGpuCatalog 获取实时数据。
+     */
+    public JSONObject getCachedGpuCatalog(String billingType) {
+        String cacheKey = catalogCacheKey(billingType);
+        JSONObject cached = readCatalogCache(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        synchronized (catalogCacheLock) {
+            cached = readCatalogCache(cacheKey);
+            if (cached != null) {
+                return cached;
+            }
+            JSONObject result = loadGpuCatalogFromScheduler(billingType);
+            if (isCacheableCatalog(result)) {
+                writeCatalogCache(cacheKey, result);
+            }
+            return result;
+        }
+    }
+
+    private JSONObject loadGpuCatalogFromScheduler(String billingType) {
+        // 三个公开只读接口相互独立，并行请求可显著降低首次加载耗时。
+        CompletableFuture<JSONObject> availabilityFuture = CompletableFuture.supplyAsync(
+                () -> fetchPublicGpuData("/api/v1/gpu/availability"));
+        CompletableFuture<JSONObject> catalogFuture = CompletableFuture.supplyAsync(
+                () -> fetchPublicGpuData("/api/v1/gpu/catalog"));
+        CompletableFuture<JSONObject> optionsFuture = CompletableFuture.supplyAsync(
+                () -> fetchPublicGpuData("/api/v1/gpu/volcano/options"));
+        CompletableFuture.allOf(availabilityFuture, catalogFuture, optionsFuture).join();
+        JSONObject availability = availabilityFuture.join();
+        JSONObject catalog = catalogFuture.join();
+        JSONObject options = optionsFuture.join();
+        return filterHiddenRegions(mergeGpuCatalog(availability, catalog, options, billingType));
+    }
+
+    private String catalogCacheKey(String billingType) {
+        String suffix = StringUtils.isBlank(billingType) ? "all" : billingType.trim().toLowerCase();
+        return catalogCacheKeyPrefix + suffix;
+    }
+
+    private JSONObject readCatalogCache(String key) {
+        try {
+            Object value = redisTemplate.opsForValue().get(key);
+            if (value instanceof JSONObject json) {
+                return JSON.parseObject(json.toJSONString());
+            }
+            if (value instanceof String text && StringUtils.isNotBlank(text)) {
+                return JSON.parseObject(text);
+            }
+            if (value != null) {
+                return JSON.parseObject(JSON.toJSONString(value));
+            }
+        } catch (Exception e) {
+            log.warn("读取 GPU 目录缓存失败，将直接请求调度器: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private void writeCatalogCache(String key, JSONObject value) {
+        if (catalogCacheTtlSeconds <= 0) return;
+        try {
+            redisTemplate.opsForValue().set(key, value.toJSONString(), catalogCacheTtlSeconds, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("写入 GPU 目录缓存失败，不影响本次请求: {}", e.getMessage());
+        }
+    }
+
+    private boolean isCacheableCatalog(JSONObject value) {
+        return value != null && !(Boolean.FALSE.equals(value.getBoolean("success"))
+                && "unavailable".equalsIgnoreCase(value.getString("source")));
+    }
+
+    private JSONObject filterHiddenRegions(JSONObject catalog) {
+        if (catalog == null || catalog.getJSONArray("regions") == null) {
+            return catalog;
+        }
+        JSONArray visibleRegions = new JSONArray();
+        for (Object item : catalog.getJSONArray("regions")) {
+            JSONObject region = toJSONObject(item);
+            if (region != null && !gpuMarketProperties.isHiddenRegion(getString(region, "region", "regionCode", "region_code"))) {
+                visibleRegions.add(region);
+            }
+        }
+        catalog.put("regions", visibleRegions);
+        return catalog;
+    }
+
+    /** 根据聚合目录校验外部实例的当前实价。 */
+    public BigDecimal findGpuPrice(String regionCode, String gpuModel, String gpuMemory,
+            String instanceTypeId, String billingType) {
+        JSONObject catalog = getGpuCatalog(billingType);
+        boolean monthly = "monthly".equalsIgnoreCase(billingType);
+        for (Object regionItem : catalog.getJSONArray("regions") == null ? new JSONArray() : catalog.getJSONArray("regions")) {
+            JSONObject region = toJSONObject(regionItem);
+            if (region == null || !StringUtils.equals(regionCode, getString(region, "region"))) continue;
+            for (Object specItem : region.getJSONArray("gpuSpecs") == null ? new JSONArray() : region.getJSONArray("gpuSpecs")) {
+                JSONObject spec = toJSONObject(specItem);
+                if (spec == null || !StringUtils.equals(gpuModel, getString(spec, "gpuModel", "gpu_model"))) continue;
+                if (StringUtils.isNotBlank(gpuMemory) && !StringUtils.equals(gpuMemory, getString(spec, "gpuMemory", "gpu_memory"))) continue;
+                for (Object instanceItem : spec.getJSONArray("instanceTypes") == null ? new JSONArray() : spec.getJSONArray("instanceTypes")) {
+                    JSONObject instance = toJSONObject(instanceItem);
+                    if (instance != null && StringUtils.equals(instanceTypeId, getString(instance, "instanceTypeId", "instance_type_id"))) {
+                        return priceNumber(monthly ? instance.get("priceMonthly") : instance.get("price"));
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /** 外部接口为公开接口，不附加管理端鉴权参数。 */
+    private JSONObject fetchPublicGpuData(String path) {
+        String url = baseUrl + path;
+        try {
+            log.info("Fetching GPU data from {}", url);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(new HttpHeaders()), String.class);
+            JSONObject result = JSON.parseObject(response.getBody());
+            if (result != null) {
+                return result;
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch GPU data from {}", url, e);
+        }
+        JSONObject failed = new JSONObject();
+        failed.put("success", false);
+        failed.put("source", "unavailable");
+        failed.put("regions", new JSONArray());
+        failed.put("message", "GPU 数据暂时不可用");
+        return failed;
+    }
+
+    private JSONObject mergeGpuCatalog(JSONObject availability, JSONObject catalog, JSONObject options, String billingType) {
+        boolean hasAvailability = Boolean.TRUE.equals(availability.getBoolean("success"))
+                && availability.getJSONArray("regions") != null;
+        boolean hasCatalog = Boolean.TRUE.equals(catalog.getBoolean("success"))
+                && catalog.getJSONArray("regions") != null;
+
+        // 实时接口不可用时仍返回完整目录，避免后台短暂异常导致页面无数据。
+        if (!hasAvailability && hasCatalog) {
+            JSONObject fallback = JSON.parseObject(catalog.toJSONString());
+            fallback.put("availabilityStatus", "unavailable");
+            fallback.put("availabilityMessage", availability.getString("message"));
+            normalizeCatalogPrices(fallback, options);
+            fallback.put("optionsSource", options.getString("source"));
+            return filterCatalogByBillingType(fallback, billingType);
+        }
+        if (!hasCatalog && hasAvailability) {
+            JSONObject fallback = JSON.parseObject(availability.toJSONString());
+            fallback.put("catalogStatus", "unavailable");
+            fallback.put("catalogMessage", catalog.getString("message"));
+            normalizeCatalogPrices(fallback, options);
+            fallback.put("optionsSource", options.getString("source"));
+            return filterCatalogByBillingType(fallback, billingType);
+        }
+        if (!hasAvailability && !hasCatalog) {
+            JSONObject failed = new JSONObject();
+            failed.put("success", false);
+            failed.put("source", "unavailable");
+            failed.put("regions", new JSONArray());
+            failed.put("message", "GPU 数据暂时不可用");
+            return failed;
+        }
+
+        JSONObject merged = JSON.parseObject(catalog.toJSONString());
+        merged.put("source", catalog.getString("source"));
+        merged.put("availabilitySource", availability.getString("source"));
+        merged.put("availabilityUpdatedAt", availability.getString("updatedAt"));
+        merged.put("mergeMode", "availability+catalog");
+        merged.put("mergeMessage", "实时可用资源与完整 ECS 目录已合并");
+        merged.put("regions", mergeRegions(availability.getJSONArray("regions"), catalog.getJSONArray("regions")));
+        normalizeCatalogPrices(merged, options);
+        merged.put("optionsSource", options.getString("source"));
+        return filterCatalogByBillingType(merged, billingType);
+    }
+
+    private JSONObject filterCatalogByBillingType(JSONObject result, String billingType) {
+        if (result == null || StringUtils.isBlank(billingType) || result.getJSONArray("regions") == null) {
+            return result;
+        }
+        boolean monthly = "monthly".equalsIgnoreCase(billingType);
+        JSONArray filteredRegions = new JSONArray();
+        for (Object regionItem : result.getJSONArray("regions")) {
+            JSONObject region = toJSONObject(regionItem);
+            if (region == null || region.getJSONArray("gpuSpecs") == null) continue;
+            JSONArray filteredSpecs = new JSONArray();
+            for (Object specItem : region.getJSONArray("gpuSpecs")) {
+                JSONObject spec = toJSONObject(specItem);
+                if (spec == null || spec.getJSONArray("instanceTypes") == null) continue;
+                JSONArray filteredInstances = new JSONArray();
+                for (Object instanceItem : spec.getJSONArray("instanceTypes")) {
+                    JSONObject instance = toJSONObject(instanceItem);
+                    if (instance == null) continue;
+                    Object price = monthly ? instance.get("priceMonthly") : instance.get("price");
+                    BigDecimal numericPrice = priceNumber(price);
+                    if (numericPrice != null && numericPrice.compareTo(BigDecimal.ZERO) > 0) filteredInstances.add(instance);
+                }
+                if (!filteredInstances.isEmpty()) {
+                    spec.put("instanceTypes", filteredInstances);
+                    filteredSpecs.add(spec);
+                }
+            }
+            if (!filteredSpecs.isEmpty()) {
+                region.put("gpuSpecs", filteredSpecs);
+                filteredRegions.add(region);
+            }
+        }
+        result.put("regions", filteredRegions);
+        return result;
+    }
+
+    /**
+     * 将外部接口返回的价格对象统一为前端可直接展示的数值。
+     * options 实例价格优先，catalog 实例级价格其次，规格级价格作为兜底。
+     */
+    private void normalizeCatalogPrices(JSONObject result, JSONObject options) {
+        if (result == null || result.getJSONArray("regions") == null) {
+            return;
+        }
+        Map<String, JSONObject> optionInstances = new LinkedHashMap<>();
+        if (options != null && options.getJSONArray("regions") != null) {
+            for (Object regionItem : options.getJSONArray("regions")) {
+                JSONObject region = toJSONObject(regionItem);
+                if (region == null || region.getJSONArray("gpuSpecs") == null) continue;
+                String regionCode = defaultString(getString(region, "region"), "");
+                for (Object specItem : region.getJSONArray("gpuSpecs")) {
+                    JSONObject spec = toJSONObject(specItem);
+                    if (spec == null || spec.getJSONArray("instanceTypes") == null) continue;
+                    String compositeSpecKey = regionCode + "|" + specKey(spec);
+                    for (Object instanceItem : spec.getJSONArray("instanceTypes")) {
+                        JSONObject instance = toJSONObject(instanceItem);
+                        if (instance == null) continue;
+                        String instanceId = getString(instance, "instanceTypeId", "instance_type_id");
+                        if (StringUtils.isNotBlank(instanceId)) optionInstances.put(compositeSpecKey + "|" + instanceId, instance);
+                    }
+                }
+            }
+        }
+        for (Object regionItem : result.getJSONArray("regions")) {
+            JSONObject region = toJSONObject(regionItem);
+            if (region == null || region.getJSONArray("gpuSpecs") == null) continue;
+            String regionCode = defaultString(getString(region, "region"), "");
+            for (Object specItem : region.getJSONArray("gpuSpecs")) {
+                JSONObject spec = toJSONObject(specItem);
+                if (spec == null || spec.getJSONArray("instanceTypes") == null) continue;
+                String currentSpecKey = regionCode + "|" + specKey(spec);
+                for (Object instanceItem : spec.getJSONArray("instanceTypes")) {
+                    JSONObject instance = toJSONObject(instanceItem);
+                    if (instance == null) continue;
+                    String instanceId = getString(instance, "instanceTypeId", "instance_type_id");
+                    JSONObject option = optionInstances.get(currentSpecKey + "|" + instanceId);
+                    BigDecimal hourlyPrice = firstValidPrice(
+                            option == null ? null : option.get("price"),
+                            instance.get("price"),
+                            spec.get("price"));
+                    BigDecimal monthlyPrice = firstValidPrice(
+                            option == null ? null : option.get("priceMonthly"),
+                            instance.get("priceMonthly"),
+                            spec.get("priceMonthly"));
+                    instance.put("price", hourlyPrice);
+                    instance.put("priceMonthly", monthlyPrice);
+                    if (option != null) {
+                        copyIfPresent(instance, option, "currency");
+                        copyIfPresent(instance, option, "stockStatus");
+                    }
+                }
+            }
+        }
+    }
+
+    private void copyIfPresent(JSONObject target, JSONObject source, String key) {
+        if (source.containsKey(key) && source.get(key) != null) target.put(key, source.get(key));
+    }
+
+    private BigDecimal priceNumber(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number) {
+            return new BigDecimal(String.valueOf(value));
+        }
+        if (value instanceof String) {
+            try {
+                return new BigDecimal((String) value);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        JSONObject object = toJSONObject(value);
+        if (object == null) return null;
+        Object unitPrice = object.get("unitPrice");
+        if (unitPrice == null) unitPrice = object.get("unit_price");
+        if (unitPrice == null) return null;
+        try {
+            return new BigDecimal(String.valueOf(unitPrice));
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private BigDecimal firstValidPrice(Object... values) {
+        for (Object value : values) {
+            BigDecimal price = priceNumber(value);
+            if (price != null && price.compareTo(BigDecimal.ZERO) > 0) return price;
+        }
+        return null;
+    }
+
+    private JSONArray mergeRegions(JSONArray availabilityRegions, JSONArray catalogRegions) {
+        Map<String, JSONObject> catalogByRegion = new LinkedHashMap<>();
+        for (Object item : catalogRegions) {
+            JSONObject region = toJSONObject(item);
+            if (region != null) {
+                catalogByRegion.put(defaultString(getString(region, "region"), ""), region);
+            }
+        }
+
+        JSONArray mergedRegions = new JSONArray();
+        for (Object item : availabilityRegions) {
+            JSONObject availableRegion = toJSONObject(item);
+            if (availableRegion == null) {
+                continue;
+            }
+            String regionCode = defaultString(getString(availableRegion, "region"), "");
+            JSONObject catalogRegion = catalogByRegion.get(regionCode);
+            JSONObject mergedRegion = catalogRegion == null
+                    ? JSON.parseObject(availableRegion.toJSONString())
+                    : JSON.parseObject(catalogRegion.toJSONString());
+            if (availableRegion.getString("error") != null) {
+                mergedRegion.put("error", availableRegion.getString("error"));
+            }
+            JSONArray availableSpecs = availableRegion.getJSONArray("gpuSpecs");
+            JSONArray catalogSpecs = catalogRegion == null ? new JSONArray() : catalogRegion.getJSONArray("gpuSpecs");
+            mergedRegion.put("gpuSpecs", mergeGpuSpecs(availableSpecs, catalogSpecs));
+            mergedRegions.add(mergedRegion);
+        }
+        return mergedRegions;
+    }
+
+    private JSONArray mergeGpuSpecs(JSONArray availabilitySpecs, JSONArray catalogSpecs) {
+        Map<String, JSONObject> catalogBySpec = new LinkedHashMap<>();
+        if (catalogSpecs != null) {
+            for (Object item : catalogSpecs) {
+                JSONObject spec = toJSONObject(item);
+                if (spec != null) {
+                    catalogBySpec.put(specKey(spec), spec);
+                }
+            }
+        }
+        JSONArray mergedSpecs = new JSONArray();
+        if (availabilitySpecs == null) {
+            return mergedSpecs;
+        }
+        for (Object item : availabilitySpecs) {
+            JSONObject availableSpec = toJSONObject(item);
+            if (availableSpec == null) {
+                continue;
+            }
+            JSONObject catalogSpec = catalogBySpec.get(specKey(availableSpec));
+            JSONObject mergedSpec = catalogSpec == null
+                    ? JSON.parseObject(availableSpec.toJSONString())
+                    : JSON.parseObject(catalogSpec.toJSONString());
+            mergedSpec.put("gpuCounts", availableSpec.getJSONArray("gpuCounts") != null
+                    ? availableSpec.getJSONArray("gpuCounts") : mergedSpec.getJSONArray("gpuCounts"));
+            mergedSpec.put("instanceTypes", mergeInstanceTypes(
+                    availableSpec.getJSONArray("instanceTypes"),
+                    catalogSpec == null ? null : catalogSpec.getJSONArray("instanceTypes")));
+            mergedSpecs.add(mergedSpec);
+        }
+        return mergedSpecs;
+    }
+
+    private JSONArray mergeInstanceTypes(JSONArray availabilityInstances, JSONArray catalogInstances) {
+        Map<String, JSONObject> catalogByInstance = new LinkedHashMap<>();
+        if (catalogInstances != null) {
+            for (Object item : catalogInstances) {
+                JSONObject instance = toJSONObject(item);
+                if (instance != null) {
+                    catalogByInstance.put(getString(instance, "instanceTypeId", "instance_type_id"), instance);
+                }
+            }
+        }
+        JSONArray mergedInstances = new JSONArray();
+        if (availabilityInstances == null) {
+            return mergedInstances;
+        }
+        for (Object item : availabilityInstances) {
+            JSONObject availableInstance = toJSONObject(item);
+            if (availableInstance == null) {
+                continue;
+            }
+            String instanceId = getString(availableInstance, "instanceTypeId", "instance_type_id");
+            JSONObject catalogInstance = catalogByInstance.get(instanceId);
+            JSONObject mergedInstance = catalogInstance == null
+                    ? JSON.parseObject(availableInstance.toJSONString())
+                    : JSON.parseObject(catalogInstance.toJSONString());
+            // availability 中的 null 价格不能覆盖 catalog 返回的价格对象。
+            for (Map.Entry<String, Object> entry : availableInstance.entrySet()) {
+                if (entry.getValue() != null) {
+                    mergedInstance.put(entry.getKey(), entry.getValue());
+                }
+            }
+            mergedInstances.add(mergedInstance);
+        }
+        return mergedInstances;
+    }
+
+    private String specKey(JSONObject spec) {
+        return defaultString(getString(spec, "gpuModel", "gpu_model"), "") + "|"
+                + defaultString(getString(spec, "gpuMemory", "gpu_memory"), "");
     }
 
     private ClientHttpRequestFactory getClientHttpRequestFactory() {
