@@ -26,8 +26,9 @@ import com.lingyang.cloud.mapper.GpuResourceStockMapper;
 import com.lingyang.cloud.mapper.SysCustomerMapper;
 import com.lingyang.cloud.mapper.SysOrderMapper;
 import com.lingyang.cloud.mapper.SysOrderSourceMapper;
-import com.lingyang.cloud.service.SysCustomerService;
 import com.lingyang.cloud.model.dto.GpuRentCalculateDTO;
+import com.lingyang.cloud.service.SysCustomerService;
+import com.lingyang.cloud.service.VolcanoGpuSalePriceService;
 import com.lingyang.cloud.model.dto.GpuRentOrderDTO;
 import com.lingyang.cloud.model.vo.pc.GpuMirrorItemVO;
 import com.lingyang.cloud.model.vo.pc.GpuMirrorVersionVO;
@@ -89,6 +90,9 @@ public class PcGpuRentController {
     @Resource
     private SysCustomerService sysCustomerService;
 
+    @Resource
+    private VolcanoGpuSalePriceService volcanoGpuSalePriceService;
+
     @GetMapping("/mirror/list")
     @Operation(summary = "GPU镜像列表")
     @PreAuthorize("permitAll()")
@@ -125,6 +129,9 @@ public class PcGpuRentController {
     @PostMapping("/rent/calculate")
     @Operation(summary = "GPU租用费用计算")
     public Result<GpuRentFeeVO> calculate(@RequestBody GpuRentCalculateDTO dto) {
+        if (dto.getResourceId() != null && dto.getResourceId() == 0) {
+            return calculateExternal(dto, dto.getPodCreateRequest());
+        }
         GpuResourceStockEntity stock = gpuResourceStockMapper.selectByResourceId(dto.getResourceId());
         if (stock == null || stock.getAvailableCount() == null || dto.getQuantity() == null || dto.getQuantity() < 1 || stock.getAvailableCount() < dto.getQuantity()) {
             return Result.error("库存不足");
@@ -156,7 +163,7 @@ public class PcGpuRentController {
         //dto = buildMockRentOrderDTO();
         GpuPodCreateRequest request = dto.getPodCreateRequest();
         Result<GpuRentFeeVO> feeResult = dto.getResourceId() != null && dto.getResourceId() == 0
-                ? calculateExternal(dto, request)
+                ? calculateExternalForOrder(dto, request)
                 : calculate(dto);
         if (feeResult.getData() == null) {
             return Result.error("创建订单失败");
@@ -178,6 +185,11 @@ public class PcGpuRentController {
         request.setPodName(null);
         request.setTenantId(tenant.tenantId());
         request.setTenantName(tenant.tenantName());
+
+        // 浏览器提交的价格只用于展示；资源创建始终使用服务端确定的火山云快照价，快照不可用时才使用实时兜底价。
+        if (dto.getResourceId() != null && dto.getResourceId() == 0) {
+            applyUpstreamPricing(request, orderFee);
+        }
 
         GpuPodCreateResponse podResponse;
         if (gpuPodProperties.isMockCreateEnabled()) {
@@ -215,22 +227,63 @@ public class PcGpuRentController {
         return Result.success(vo);
     }
 
-    private Result<GpuRentFeeVO> calculateExternal(GpuRentOrderDTO dto, GpuPodCreateRequest request) {
+    /**
+     * 费用试算只读取数据库中的火山云目录快照，不能因上游接口慢或超时阻塞页面。
+     */
+    private Result<GpuRentFeeVO> calculateExternal(GpuRentCalculateDTO dto, GpuPodCreateRequest request) {
         if (request == null || request.getGpuSpec() == null) return Result.error("GPU规格参数不能为空");
+        BigDecimal snapshotPrice = findSnapshotPrice(dto, request);
+        if (!isPositive(snapshotPrice)) return Result.error("价格不存在");
+        return buildExternalFee(dto, request, snapshotPrice);
+    }
+
+    /**
+     * 订单提交时仍然优先使用数据库快照；只有快照查询失败、规格不存在或价格无效时，
+     * 才访问火山云上游接口作为兜底。实时价格即使获取成功，也只在快照不可用时使用。
+     */
+    private Result<GpuRentFeeVO> calculateExternalForOrder(GpuRentCalculateDTO dto, GpuPodCreateRequest request) {
+        if (request == null || request.getGpuSpec() == null) return Result.error("GPU规格参数不能为空");
+        BigDecimal unitPrice = findSnapshotPrice(dto, request);
+        if (!isPositive(unitPrice)) {
+            try {
+                unitPrice = gpuSchedulerApiClient.findGpuPrice(
+                        request.getRegion(), request.getGpuSpec().getModel(), request.getGpuSpec().getGpuMemory(),
+                        request.getMachineId(), StringUtils.defaultIfBlank(dto.getBillingType(), "hourly"));
+            } catch (Exception e) {
+                return Result.error("价格不存在");
+            }
+        }
+        if (!isPositive(unitPrice)) return Result.error("价格不存在");
+        return buildExternalFee(dto, request, unitPrice);
+    }
+
+    private BigDecimal findSnapshotPrice(GpuRentCalculateDTO dto, GpuPodCreateRequest request) {
+        try {
+            return volcanoGpuSalePriceService.findSnapshotGpuPrice(
+                    request.getRegion(), request.getGpuSpec().getModel(), request.getGpuSpec().getGpuMemory(),
+                    request.getMachineId(), StringUtils.defaultIfBlank(dto.getBillingType(), "hourly"));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Result<GpuRentFeeVO> buildExternalFee(GpuRentCalculateDTO dto, GpuPodCreateRequest request,
+            BigDecimal unitPrice) {
         String billingType = StringUtils.defaultIfBlank(dto.getBillingType(), "hourly");
-        String instanceTypeId = request.getMachineId();
         if (StringUtils.isBlank(request.getZone())) {
             request.setZone(StringUtils.defaultIfBlank(request.getRegion(), "default"));
         }
-        BigDecimal unitPrice = gpuSchedulerApiClient.findGpuPrice(
-                request.getRegion(), request.getGpuSpec().getModel(), request.getGpuSpec().getGpuMemory(),
-                instanceTypeId, billingType);
-        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) return Result.error("价格不存在");
         int quantity = dto.getQuantity() == null || dto.getQuantity() < 1 ? 1 : dto.getQuantity();
         int duration = dto.getDuration() == null || dto.getDuration() < 1 ? 1 : dto.getDuration();
-        BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity)).multiply(BigDecimal.valueOf(duration));
+        BigDecimal saleUnitPrice = volcanoGpuSalePriceService.resolveSalePrice(
+                request.getRegion(), request.getMachineId(), billingType, unitPrice);
+        if (!isPositive(saleUnitPrice)) return Result.error("平台售价无效");
+        BigDecimal subtotal = saleUnitPrice.multiply(BigDecimal.valueOf(quantity)).multiply(BigDecimal.valueOf(duration));
         GpuRentFeeVO vo = new GpuRentFeeVO();
-        vo.setUnitPrice(unitPrice);
+        vo.setUpstreamUnitPrice(unitPrice);
+        vo.setSaleUnitPrice(saleUnitPrice);
+        vo.setPremiumUnitAmount(saleUnitPrice.subtract(unitPrice));
+        vo.setUnitPrice(saleUnitPrice);
         vo.setQuantity(quantity);
         vo.setDuration(duration);
         vo.setSubtotal(subtotal);
@@ -239,17 +292,34 @@ public class PcGpuRentController {
         return Result.success(vo);
     }
 
+    private boolean isPositive(BigDecimal value) {
+        return value != null && value.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    private void applyUpstreamPricing(GpuPodCreateRequest request, GpuRentFeeVO fee) {
+        GpuPodCreateRequest.Pricing pricing = request.getPricing();
+        if (pricing == null) {
+            pricing = new GpuPodCreateRequest.Pricing();
+            request.setPricing(pricing);
+        }
+        BigDecimal upstreamUnitPrice = fee.getUpstreamUnitPrice() == null ? fee.getUnitPrice() : fee.getUpstreamUnitPrice();
+        BigDecimal upstreamTotal = upstreamUnitPrice
+                .multiply(BigDecimal.valueOf(fee.getQuantity()))
+                .multiply(BigDecimal.valueOf(fee.getDuration()));
+        pricing.setUnitPrice(upstreamUnitPrice);
+        pricing.setDiscountUnitPrice(upstreamUnitPrice);
+        pricing.setTotalCost(upstreamTotal);
+        pricing.setDiscountTotalCost(upstreamTotal);
+        pricing.setCurrency("CNY");
+    }
+
     private GpuRentOrderVO.Pricing toOrderPricing(GpuRentFeeVO fee, GpuPodCreateResponse response) {
         GpuRentOrderVO.Pricing pricing = new GpuRentOrderVO.Pricing();
         GpuPodCreateResponse.BillingInfo billing = response == null ? null : response.getBillingInfo();
-        BigDecimal unitPrice = billing == null || billing.getUnitPrice() <= 0
-                ? fee.getUnitPrice() : BigDecimal.valueOf(billing.getUnitPrice());
-        BigDecimal discountUnitPrice = billing == null || billing.getDiscountUnitPrice() <= 0
-                ? unitPrice : BigDecimal.valueOf(billing.getDiscountUnitPrice());
-        BigDecimal totalCost = billing == null || billing.getTotalCost() <= 0
-                ? fee.getSubtotal() : BigDecimal.valueOf(billing.getTotalCost());
-        BigDecimal discountTotalCost = billing == null || billing.getDiscountTotalCost() <= 0
-                ? fee.getTotal() : BigDecimal.valueOf(billing.getDiscountTotalCost());
+        BigDecimal unitPrice = fee.getUnitPrice();
+        BigDecimal discountUnitPrice = unitPrice;
+        BigDecimal totalCost = fee.getSubtotal();
+        BigDecimal discountTotalCost = fee.getTotal();
         pricing.setUnitPrice(unitPrice);
         pricing.setDiscountUnitPrice(discountUnitPrice);
         pricing.setTotalCost(totalCost);
@@ -371,7 +441,9 @@ public class PcGpuRentController {
         order.setOrderNo(orderNo);
         order.setOrderType(OrderTypeEnum.NEW_RESOURCE);
         order.setOriginalPrice(originalPrice);
-        order.setPremiumPrice(originalPrice);
+        BigDecimal upstreamUnitPrice = fee.getUpstreamUnitPrice() == null ? unitPrice : fee.getUpstreamUnitPrice();
+        order.setPremiumPrice(originalPrice.subtract(upstreamUnitPrice.multiply(BigDecimal.valueOf(fee.getQuantity()))
+                .multiply(BigDecimal.valueOf(fee.getDuration()))));
         order.setUserDiscountAmount(discount);
         order.setFinalPayAmount(finalPayAmount);
         order.setBalancePayAmount(finalPayAmount);
@@ -402,6 +474,15 @@ public class PcGpuRentController {
         pricingSnapshot.put("discount_total_cost", finalPayAmount);
         pricingSnapshot.put("currency", "CNY");
         pricingSnapshot.put("unit", getDurationUnit(dto.getBillingType()).name());
+        pricingSnapshot.put("upstreamPrice", fee.getUpstreamUnitPrice());
+        pricingSnapshot.put("salePrice", fee.getSaleUnitPrice() == null ? unitPrice : fee.getSaleUnitPrice());
+        pricingSnapshot.put("premiumUnitAmount", fee.getPremiumUnitAmount());
+        pricingSnapshot.put("premiumAmount", fee.getPremiumUnitAmount() == null
+                ? null : fee.getPremiumUnitAmount().multiply(BigDecimal.valueOf(fee.getQuantity()))
+                .multiply(BigDecimal.valueOf(fee.getDuration())));
+        pricingSnapshot.put("billingType", dto.getBillingType());
+        pricingSnapshot.put("quantity", dto.getQuantity());
+        pricingSnapshot.put("duration", dto.getDuration());
         configDetail.put("pricing", pricingSnapshot);
 
         String gpuModel = podRequest.getGpuSpec() == null ? "" : podRequest.getGpuSpec().getModel();
@@ -418,7 +499,7 @@ public class PcGpuRentController {
         source.setDuration(getSourceDuration(dto));
         source.setDurationUnit(getDurationUnit(dto.getBillingType()));
         source.setNumber(dto.getQuantity() == null ? 1 : dto.getQuantity());
-        source.setUnitPrice(unitPrice);
+        source.setUnitPrice(fee.getUpstreamUnitPrice() == null ? unitPrice : fee.getUpstreamUnitPrice());
         source.setPremiumPrice(unitPrice);
         source.setUserDiscountAmount(unitPrice.subtract(discountUnitPrice).max(BigDecimal.ZERO));
         source.setFinalUnitPrice(discountUnitPrice);

@@ -30,7 +30,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const statusInfo = computed(() => {
-  return StatusMap[props.status] || { label: '未知', type: 'info', color: '#909399' }
+  return StatusMap[props.status] || { label: '创建中', type: 'info', color: '#909399' }
 })
 </script>
 

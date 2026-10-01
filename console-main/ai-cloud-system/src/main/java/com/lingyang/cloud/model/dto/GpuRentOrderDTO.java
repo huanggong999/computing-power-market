@@ -8,5 +8,4 @@ public class GpuRentOrderDTO extends GpuRentCalculateDTO {
     private String mirrorId;
     private String mirrorVersionId;
     private Boolean agreeProtocol;
-    private GpuPodCreateRequest podCreateRequest;
 }

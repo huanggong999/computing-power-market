@@ -55,6 +55,7 @@ export interface AccountInfo {
 /** 费用计算参数 */
 export interface CalculateFeeParams {
   resourceId: number
+  podCreateRequest?: PodCreateRequest
   billingType: 'on_demand' | 'hourly' | 'daily' | 'weekly' | 'monthly'
   quantity: number
   duration?: number
@@ -65,6 +66,9 @@ export interface CalculateFeeParams {
 /** 费用计算结果 */
 export interface FeeResult {
   unitPrice: number
+  upstreamUnitPrice?: number
+  saleUnitPrice?: number
+  premiumUnitAmount?: number
   quantity: number
   duration: number
   subtotal: number
