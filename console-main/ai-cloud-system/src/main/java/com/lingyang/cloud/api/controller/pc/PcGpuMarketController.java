@@ -16,6 +16,7 @@ import com.lingyang.cloud.service.GpuRegionService;
 import com.lingyang.cloud.service.GpuResourceService;
 import com.lingyang.cloud.service.GpuResourceSpecService;
 import com.lingyang.cloud.service.GpuZoneService;
+import com.lingyang.cloud.service.VolcanoGpuSalePriceService;
 import com.lingyang.common.core.model.page.PageQuery;
 import com.lingyang.common.core.model.result.PageResult;
 import com.lingyang.common.core.model.result.Result;
@@ -69,6 +70,9 @@ public class PcGpuMarketController {
 
     @Resource
     private GpuMarketProperties gpuMarketProperties;
+
+    @Resource
+    private VolcanoGpuSalePriceService volcanoGpuSalePriceService;
 
     /**
      * GPU资源列表
@@ -206,7 +210,7 @@ public class PcGpuMarketController {
     @PreAuthorize("permitAll()")
     public Result<com.alibaba.fastjson2.JSONObject> volcanoCatalog(
             @RequestParam(required = false) @Parameter(description = "计费方式 monthly/on_demand/hourly") String billingType) {
-        return Result.success(gpuSchedulerApiClient.getCachedGpuCatalog(billingType));
+        return Result.success(volcanoGpuSalePriceService.getDisplayCatalog(billingType));
     }
 
     /**

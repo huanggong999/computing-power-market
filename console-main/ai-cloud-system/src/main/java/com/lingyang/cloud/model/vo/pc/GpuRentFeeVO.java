@@ -7,6 +7,9 @@ import java.math.BigDecimal;
 @Data
 public class GpuRentFeeVO {
     private BigDecimal unitPrice;
+    private BigDecimal upstreamUnitPrice;
+    private BigDecimal saleUnitPrice;
+    private BigDecimal premiumUnitAmount;
     private Integer quantity;
     private Integer duration;
     private BigDecimal subtotal;

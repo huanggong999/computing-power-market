@@ -18,6 +18,14 @@ export interface VolcanoInstanceType {
   memGib?: number
   price?: VolcanoPrice | number | null
   priceMonthly?: VolcanoPrice | number | null
+  salePrice?: VolcanoPrice | number | null
+  salePriceMonthly?: VolcanoPrice | number | null
+  priceConfigured?: boolean
+  priceConfigModified?: boolean
+  priceConfigStatus?: 'default' | 'enabled' | 'disabled'
+  monthlyPriceConfigStatus?: 'default' | 'enabled' | 'disabled'
+  hourlyPriceConfigId?: number | null
+  monthlyPriceConfigId?: number | null
 }
 
 export interface VolcanoGpuSpec {

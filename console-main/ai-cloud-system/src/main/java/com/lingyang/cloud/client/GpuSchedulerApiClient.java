@@ -17,7 +17,6 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -60,13 +59,6 @@ public class GpuSchedulerApiClient {
     @Value("${gpu.scheduler.read-timeout:20000}")
     private Integer readTimeout;
 
-    /** 火山云目录变化频率低，默认缓存 5 分钟，避免每次打开页面都请求三个上游接口。 */
-    @Value("${gpu.scheduler.catalog-cache-ttl-seconds:300}")
-    private long catalogCacheTtlSeconds;
-
-    @Value("${gpu.scheduler.catalog-cache-key-prefix:gpu:market:catalog:}")
-    private String catalogCacheKeyPrefix;
-
     private RestTemplate restTemplate;
 
     @Resource
@@ -77,12 +69,6 @@ public class GpuSchedulerApiClient {
 
     @Resource
     private GpuMarketProperties gpuMarketProperties;
-
-    @Resource
-    private RedisTemplate<Object, Object> redisTemplate;
-
-    /** 同一实例首次加载时只允许一个请求访问上游，其他请求复用刚写入的缓存。 */
-    private final Object catalogCacheLock = new Object();
 
     @PostConstruct
     public void init() {
@@ -197,29 +183,6 @@ public class GpuSchedulerApiClient {
         return loadGpuCatalogFromScheduler(billingType);
     }
 
-    /**
-     * 官网展示目录允许短时间缓存；下单价格校验仍调用 getGpuCatalog 获取实时数据。
-     */
-    public JSONObject getCachedGpuCatalog(String billingType) {
-        String cacheKey = catalogCacheKey(billingType);
-        JSONObject cached = readCatalogCache(cacheKey);
-        if (cached != null) {
-            return cached;
-        }
-
-        synchronized (catalogCacheLock) {
-            cached = readCatalogCache(cacheKey);
-            if (cached != null) {
-                return cached;
-            }
-            JSONObject result = loadGpuCatalogFromScheduler(billingType);
-            if (isCacheableCatalog(result)) {
-                writeCatalogCache(cacheKey, result);
-            }
-            return result;
-        }
-    }
-
     private JSONObject loadGpuCatalogFromScheduler(String billingType) {
         // 三个公开只读接口相互独立，并行请求可显著降低首次加载耗时。
         CompletableFuture<JSONObject> availabilityFuture = CompletableFuture.supplyAsync(
@@ -233,43 +196,6 @@ public class GpuSchedulerApiClient {
         JSONObject catalog = catalogFuture.join();
         JSONObject options = optionsFuture.join();
         return filterHiddenRegions(mergeGpuCatalog(availability, catalog, options, billingType));
-    }
-
-    private String catalogCacheKey(String billingType) {
-        String suffix = StringUtils.isBlank(billingType) ? "all" : billingType.trim().toLowerCase();
-        return catalogCacheKeyPrefix + suffix;
-    }
-
-    private JSONObject readCatalogCache(String key) {
-        try {
-            Object value = redisTemplate.opsForValue().get(key);
-            if (value instanceof JSONObject json) {
-                return JSON.parseObject(json.toJSONString());
-            }
-            if (value instanceof String text && StringUtils.isNotBlank(text)) {
-                return JSON.parseObject(text);
-            }
-            if (value != null) {
-                return JSON.parseObject(JSON.toJSONString(value));
-            }
-        } catch (Exception e) {
-            log.warn("读取 GPU 目录缓存失败，将直接请求调度器: {}", e.getMessage());
-        }
-        return null;
-    }
-
-    private void writeCatalogCache(String key, JSONObject value) {
-        if (catalogCacheTtlSeconds <= 0) return;
-        try {
-            redisTemplate.opsForValue().set(key, value.toJSONString(), catalogCacheTtlSeconds, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            log.warn("写入 GPU 目录缓存失败，不影响本次请求: {}", e.getMessage());
-        }
-    }
-
-    private boolean isCacheableCatalog(JSONObject value) {
-        return value != null && !(Boolean.FALSE.equals(value.getBoolean("success"))
-                && "unavailable".equalsIgnoreCase(value.getString("source")));
     }
 
     private JSONObject filterHiddenRegions(JSONObject catalog) {

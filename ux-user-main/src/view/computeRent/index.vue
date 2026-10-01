@@ -29,17 +29,20 @@
     />
 
     <div v-loading="loading" class="purchase-shell">
-      <main v-if="createdOrder" class="creation-result">
+      <main v-if="createdOrder || orderSubmittingViewVisible" class="creation-result">
         <div class="result-status">
-          <div class="result-icon"><el-icon><Check /></el-icon></div>
+          <div class="result-icon" :class="{ 'result-icon-pending': isOrderSubmitting }">
+            <el-icon><Loading v-if="isOrderSubmitting" /><Check v-else /></el-icon>
+          </div>
           <div>
-            <h1>{{ isVolcanoResourceCreating ? '资源创建中' : '实例已提交创建' }}</h1>
-            <p v-if="isVolcanoResourceCreating">后台已确认资源创建，预计需要 15-30 分钟，请耐心等待，期间无需重复提交。</p>
+            <h1>{{ isOrderSubmitting ? '订单提交中' : isVolcanoResourceCreating ? '资源创建中' : '实例已提交创建' }}</h1>
+            <p v-if="isOrderSubmitting">系统正在校验实时价格并提交创建请求，请保持当前页面打开，期间请勿重复提交。</p>
+            <p v-else-if="isVolcanoResourceCreating">后台已确认资源创建，预计需要 15-30 分钟，请耐心等待，期间无需重复提交。</p>
             <p v-else>订单已支付，GPU 实例正在创建并开机。资源就绪前无需重复提交。</p>
           </div>
         </div>
 
-        <div class="result-details">
+        <div v-if="createdOrder" class="result-details">
           <div class="result-detail-item">
             <span>订单号</span>
             <strong>{{ createdOrder.orderNo || '-' }}</strong>
@@ -75,13 +78,13 @@
         </div>
 
         <el-alert
-          :title="creationNotice"
+          :title="isOrderSubmitting ? '实时价格校验和资源创建通常需要数秒到数十秒，页面已锁定本次提交，完成后会自动展示订单信息。' : creationNotice"
           type="info"
           :closable="false"
           show-icon
         />
 
-        <div class="result-actions">
+        <div v-if="createdOrder" class="result-actions">
           <el-button class="secondary-result-action" @click="goToOrder">查看订单</el-button>
           <el-button class="primary-result-action" @click="goToInstance">管理实例</el-button>
         </div>
@@ -486,7 +489,7 @@
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown, ArrowRight, Back, Check, CircleCheckFilled, CircleClose, EditPen, WarningFilled } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight, Back, Check, CircleCheckFilled, CircleClose, EditPen, Loading, WarningFilled } from '@element-plus/icons-vue'
 import {
   getGpuResourceDetail,
   getMirrorList,
@@ -544,6 +547,7 @@ function goToInstance() {
 
 const loading = ref(false)
 const submitting = ref(false)
+const orderSubmittingViewVisible = ref(false)
 const createErrorConfirming = ref(false)
 const error = ref('')
 
@@ -584,6 +588,8 @@ let createProgressTimer: ReturnType<typeof setInterval> | null = null
 let createProgressDelayTimer: ReturnType<typeof setTimeout> | null = null
 let podStatusTimer: ReturnType<typeof setInterval> | null = null
 let feeCalculateSeq = 0
+
+const isOrderSubmitting = computed(() => submitting.value && orderSubmittingViewVisible.value)
 
 interface OrderDraft {
   source?: string
@@ -895,6 +901,7 @@ const isVolcanoResourceCreating = computed(() => {
 })
 
 const creationStatusDisplay = computed(() => {
+  if (isOrderSubmitting.value) return '提交中'
   if (isVolcanoResourceCreating.value) return '资源创建中'
   return podDisplayStatus.value
 })
@@ -1035,6 +1042,8 @@ function startCreateProgress() {
   createElapsedSeconds.value = 0
   podStatus.value = null
   podStatusError.value = ''
+  // 外部资源只在后端确认创建成功后显示简化提示，避免请求期间误显示。
+  if (gpuResource.value?.source === 'volcano') return
   createProgressDelayTimer = setTimeout(() => {
     createProgressVisible.value = true
     createProgressTimer = setInterval(() => {
@@ -1189,7 +1198,7 @@ async function loadGpuResource() {
 
     if (mirrorsRes.code === 200 && mirrorsRes.data) {
       mirrorList.value = mirrorsRes.data
-      initBaseMirrorSelection()
+      await initBaseMirrorSelection()
     }
 
     if (accountRes.code === 200 && accountRes.data) {
@@ -1318,11 +1327,17 @@ async function selectBaseMirror(mirror: MirrorItem) {
   await onMirrorChange(mirror.id)
 }
 
-function initBaseMirrorSelection() {
+async function initBaseMirrorSelection() {
   if (mirrorSource.value !== 'base' || selectedBaseMirrorType.value || baseMirrorTree.value.length === 0) {
     return
   }
   selectedBaseMirrorType.value = baseMirrorTree.value[0].name
+  const frameworkVersion = selectedFrameworkVersions.value[0]?.version
+  if (frameworkVersion) selectedBaseFrameworkVersion.value = frameworkVersion
+  const pythonVersion = selectedPythonVersions.value[0]?.version
+  if (pythonVersion) selectedBasePythonVersion.value = pythonVersion
+  const cudaOption = selectedCudaOptions.value[0]?.mirror
+  if (cudaOption) await selectBaseMirror(cudaOption)
 }
 
 async function calculateFee() {
@@ -1335,16 +1350,34 @@ async function calculateFee() {
   const seq = ++feeCalculateSeq
   try {
     if (gpuResource.value?.source === 'volcano') {
-      const unitPrice = getEffectivePrice(price)
-      const subtotal = unitPrice * rentConfig.quantity * rentConfig.duration
-      feeResult.value = {
-        unitPrice,
+      const request = buildPodCreateRequest({ price })
+      if (!request) {
+        feeResult.value = null
+        return
+      }
+      const externalRes = await calculateRentFee({
+        resourceId: 0,
+        podCreateRequest: request,
+        billingType: rentConfig.billingType,
         quantity: rentConfig.quantity,
-        duration: rentConfig.duration,
-        subtotal,
-        discount: 0,
-        total: subtotal,
-        diskFee: 0
+        duration: rentConfig.duration
+      })
+      if (seq !== feeCalculateSeq) return
+      if (externalRes.code === 200 && externalRes.data) {
+        feeResult.value = {
+          ...externalRes.data,
+          unitPrice: Number(externalRes.data.unitPrice || 0),
+          quantity: Number(externalRes.data.quantity || rentConfig.quantity),
+          duration: Number(externalRes.data.duration || rentConfig.duration),
+          subtotal: Number(externalRes.data.subtotal || 0),
+          discount: Number(externalRes.data.discount || 0),
+          total: Number(externalRes.data.total || 0),
+          diskFee: 0
+        }
+        if (error.value === '费用计算失败') error.value = ''
+      } else {
+        feeResult.value = null
+        error.value = externalRes.msg || '费用计算失败'
       }
       return
     }
@@ -1382,12 +1415,22 @@ async function calculateFee() {
   }
 }
 
-function buildPodCreateRequest(): PodCreateRequest | null {
+function buildPodCreateRequest(options: { price?: any; fee?: FeeResult | null } = {}): PodCreateRequest | null {
   const resource = gpuResource.value
-  const price = currentPriceItem.value
+  const price = options.price || currentPriceItem.value
   const version = selectedMirrorVersion.value
-  const fee = feeResult.value
-  if (!resource || !price || !version || !fee) return null
+  const fee = options.fee === undefined ? feeResult.value : options.fee
+  if (!resource || !price || !version) return null
+
+  const effectiveFee = fee || {
+    unitPrice: getEffectivePrice(price),
+    quantity: rentConfig.quantity,
+    duration: rentConfig.duration,
+    subtotal: getEffectivePrice(price) * rentConfig.quantity * rentConfig.duration,
+    discount: 0,
+    total: getEffectivePrice(price) * rentConfig.quantity * rentConfig.duration,
+    diskFee: 0
+  }
 
   const unitPrice = Number(price.unitPrice || 0)
   const discountUnitPrice = getEffectivePrice(price)
@@ -1420,8 +1463,8 @@ function buildPodCreateRequest(): PodCreateRequest | null {
     pricing: {
       unitPrice,
       discountUnitPrice,
-      totalCost: fee.subtotal,
-      discountTotalCost: fee.total,
+      totalCost: effectiveFee.subtotal,
+      discountTotalCost: effectiveFee.total,
       currency: 'CNY',
       unit: billingUnitTextMap[rentConfig.billingType] || rentConfig.billingType,
       pricePerHour,
@@ -1478,15 +1521,25 @@ async function handleSubmit() {
   }
 
   submitting.value = true
+  orderSubmittingViewVisible.value = true
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 
   try {
     const podCreateRequest = buildPodCreateRequest()
     if (!podCreateRequest) {
-      stopCreateProgress()
-      await showCreateError('创建参数不完整，请重新选择配置')
+      await handleCreateFailure('创建参数不完整，请重新选择配置')
       return
     }
     startCreateProgress()
+
+    // 提交前以后端返回的平台试算价重建请求；最终金额仍由后端重新计算。
+    const confirmedPodCreateRequest = gpuResource.value.source === 'volcano' && feeResult.value
+      ? buildPodCreateRequest({ fee: feeResult.value })
+      : podCreateRequest
+    if (!confirmedPodCreateRequest) {
+      await handleCreateFailure('创建参数不完整，请重新选择配置')
+      return
+    }
 
     const params = {
       resourceId: gpuResource.value.source === 'volcano'
@@ -1498,7 +1551,7 @@ async function handleSubmit() {
       quantity: rentConfig.quantity,
       duration: rentConfig.duration,
       agreeProtocol: true,
-      podCreateRequest
+      podCreateRequest: confirmedPodCreateRequest
     }
 
     const res = await createRentOrder(params)
@@ -1511,17 +1564,15 @@ async function handleSubmit() {
       sessionStorage.removeItem('computeRentOrderDraft')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-      stopCreateProgress()
-      await showCreateError(res.msg || '创建订单失败')
+      await handleCreateFailure(res.msg || '创建订单失败')
     }
   } catch (err: any) {
-    stopCreateProgress()
     if (err?.response) {
-      await showCreateError(err.response.data?.msg || err.response.data?.message || '创建订单失败')
+      await handleCreateFailure(err.response.data?.msg || err.response.data?.message || '创建订单失败')
     } else if (err?.code === 'ECONNABORTED') {
-      await showCreateError('创建请求超时，请稍后到 GPU 实例列表查看是否创建成功')
+      await handleCreateFailure('创建请求超时，请稍后到 GPU 实例列表查看是否创建成功')
     } else {
-      await showCreateError(err?.message || '创建订单失败')
+      await handleCreateFailure(err?.message || '创建订单失败')
     }
   } finally {
     if (createdOrder.value) {
@@ -1533,6 +1584,12 @@ async function handleSubmit() {
     }
     submitting.value = false
   }
+}
+
+async function handleCreateFailure(message: string) {
+  orderSubmittingViewVisible.value = false
+  stopCreateProgress()
+  await showCreateError(message)
 }
 
 async function promptAgreement() {
@@ -2366,6 +2423,25 @@ onBeforeUnmount(() => {
   background: #eaf7ef;
   color: #1d8a55;
   font-size: 24px;
+
+  &.result-icon-pending {
+    background: #e8f1ff;
+    color: #1677ff;
+    animation: result-icon-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes result-icon-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.65;
+    transform: scale(0.94);
+  }
 }
 
 .result-details {

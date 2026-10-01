@@ -56,6 +56,8 @@ export interface GpuMarketItem {
   cudaVersion: string
   price: string
   priceMonthly?: string
+  salePrice?: unknown
+  salePriceMonthly?: unknown
   discountPrice: string
   discountRate: string
   rentableCount: number

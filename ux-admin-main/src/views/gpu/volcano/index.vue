@@ -3,13 +3,13 @@
     <div class="availability-toolbar card">
       <div>
         <div class="page-title">火山云GPU资源管理</div>
-        <div class="page-subtitle">实时可售资源与火山云 ECS 目录合并展示</div>
+        <div class="page-subtitle">数据库目录快照与平台售价配置展示</div>
       </div>
       <div class="toolbar-actions">
         <el-tag v-if="catalog.source" :type="sourceTagType">
           {{ sourceLabel }}
         </el-tag>
-        <el-button type="primary" :icon="Refresh" @click="loadCatalog">
+        <el-button type="primary" :icon="Refresh" :loading="refreshing" @click="refreshCatalog">
           刷新
         </el-button>
       </div>
@@ -44,6 +44,7 @@
 
     <div class="metadata-grid card">
       <div><span>快照日期</span><strong>{{ catalog.date || "实时目录" }}</strong></div>
+      <div><span>快照读取</span><strong>{{ snapshotStatus }}</strong></div>
       <div><span>目录更新时间</span><strong>{{ formatTime(catalog.updatedAt) }}</strong></div>
       <div><span>实时可用更新时间</span><strong>{{ formatTime(catalog.availabilityUpdatedAt) }}</strong></div>
       <div><span>价格状态</span><strong>{{ pricingStatus }}</strong></div>
@@ -115,11 +116,30 @@
                 </template>
                 <el-table :data="instanceTypes(spec)" border size="small">
                   <el-table-column prop="instanceTypeId" label="实例规格" min-width="190" show-overflow-tooltip />
-                  <el-table-column label="按量/小时" width="120" fixed="left">
+                  <el-table-column label="火山小时价" width="115" fixed="left">
                     <template #default="{ row }">{{ priceText(row.price, spec.price) }}</template>
                   </el-table-column>
-                  <el-table-column label="包月" width="120" fixed="left">
+                  <el-table-column label="平台小时价" width="115" fixed="left">
+                    <template #default="{ row }">{{ priceText(row.salePrice, row.price, spec.price) }}</template>
+                  </el-table-column>
+                  <el-table-column label="小时差额" width="100">
+                    <template #default="{ row }">{{ priceDifferenceText(row.salePrice, row.price, spec.price) }}</template>
+                  </el-table-column>
+                  <el-table-column label="火山包月价" width="115">
                     <template #default="{ row }">{{ priceText(row.priceMonthly, spec.priceMonthly) }}</template>
+                  </el-table-column>
+                  <el-table-column label="平台包月价" width="115">
+                    <template #default="{ row }">{{ priceText(row.salePriceMonthly, row.priceMonthly, spec.priceMonthly) }}</template>
+                  </el-table-column>
+                  <el-table-column label="包月差额" width="100">
+                    <template #default="{ row }">{{ priceDifferenceText(row.salePriceMonthly, row.priceMonthly, spec.priceMonthly) }}</template>
+                  </el-table-column>
+                  <el-table-column label="操作" width="200" fixed="right">
+                    <template #default="{ row }">
+                      <el-button link type="primary" @click="openPriceDialog(row, spec, 'on_demand')">小时</el-button>
+                      <el-button link type="primary" @click="openPriceDialog(row, spec, 'monthly')">包月</el-button>
+                      <el-button link type="warning" :disabled="!row.hourlyPriceConfigId && !row.monthlyPriceConfigId" @click="restoreDefault(row, row.monthlyPriceConfigId ? 'monthly' : 'on_demand')">恢复默认</el-button>
+                    </template>
                   </el-table-column>
                   <el-table-column prop="gpuCount" label="GPU卡数" width="90" />
                   <el-table-column prop="cpuCores" label="CPU核数" width="90" />
@@ -137,6 +157,32 @@
       </el-collapse>
       <el-empty v-else description="没有匹配的火山云 GPU 数据" />
     </el-card>
+    <el-dialog v-model="priceDialogVisible" title="调整平台售价" width="520px" destroy-on-close>
+      <el-form ref="priceFormRef" :model="priceForm" :rules="priceRules" label-width="110px">
+        <el-form-item label="实例规格">
+          <span>{{ priceForm.instanceTypeId }}</span>
+        </el-form-item>
+        <el-form-item label="计费类型">
+          <span>{{ priceForm.billingType === "monthly" ? "包月" : "按量/小时" }}</span>
+        </el-form-item>
+        <el-form-item label="火山实际价">
+          <span>¥{{ (priceDialogDefaultUpstream ?? 0).toFixed(2) }}</span>
+        </el-form-item>
+        <el-form-item label="平台售价" prop="salePrice">
+          <el-input-number v-model="priceForm.salePrice" :min="0.0001" :precision="4" :step="1" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="priceForm.status" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="停用" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="priceForm.remark" maxlength="256" show-word-limit />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="priceDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingPrice" @click="savePrice">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -144,7 +190,9 @@
 import { computed, onMounted, ref } from "vue";
 import { Refresh, RefreshLeft } from "@element-plus/icons-vue";
 import dayjs from "dayjs";
-import { gpuCatalogApi } from "@/api/gpuAvailability";
+import { ElMessage, ElMessageBox } from "element-plus";
+import type { FormInstance, FormRules } from "element-plus";
+import { gpuCatalogApi, refreshGpuCatalogApi, volcanoPriceDeleteApi, volcanoPriceSaveApi } from "@/api/gpuAvailability";
 
 type Availability = {
   success?: boolean;
@@ -154,6 +202,8 @@ type Availability = {
   updatedAt?: string;
   availabilityUpdatedAt?: string;
   availabilitySource?: string;
+  snapshotStatus?: "ok" | "missing" | "invalid" | "refreshed";
+  snapshotTime?: string;
   mergeMode?: string;
   mergeMessage?: string;
   pricing?: { status?: string; error?: string; total?: number; available?: number };
@@ -175,14 +225,50 @@ type InstanceType = {
   memGib?: number;
   price?: PriceValue | number | string | null;
   priceMonthly?: PriceValue | number | string | null;
+  salePrice?: PriceValue | number | string | null;
+  salePriceMonthly?: PriceValue | number | string | null;
+  priceConfigId?: number | null;
+  priceConfigStatus?: "default" | "enabled" | "disabled";
+  hourlyPriceConfigId?: number | null;
+  monthlyPriceConfigId?: number | null;
 };
 type PriceValue = { available?: boolean; unitPrice?: number | null; error?: string; currency?: string };
 
 const loading = ref(false);
+const refreshing = ref(false);
 const errorMessage = ref("");
 const catalog = ref<Availability>({ regions: [] });
 const activeRegions = ref<string[]>([]);
 const filters = ref({ region: "", gpuModel: "", gpuCount: "", instanceType: "" });
+const priceDialogVisible = ref(false);
+const savingPrice = ref(false);
+const priceFormRef = ref<FormInstance>();
+const priceForm = ref<{
+  id?: number | null;
+  regionCode: string;
+  instanceTypeId: string;
+  gpuModel: string;
+  gpuMemory?: string;
+  gpuCount?: number;
+  billingType: "on_demand" | "monthly";
+  upstreamPrice?: number | null;
+  salePrice?: number | null;
+  status: number;
+  remark?: string;
+}>({
+  regionCode: "",
+  instanceTypeId: "",
+  gpuModel: "",
+  billingType: "on_demand",
+  status: 1,
+});
+const priceRules: FormRules = {
+  salePrice: [{ required: true, message: "请输入平台售价", trigger: "blur" }, { validator: (_, value: number, callback) => {
+    if (!Number.isFinite(Number(value)) || Number(value) <= 0) callback(new Error("平台售价必须大于0"));
+    else callback();
+  }, trigger: "blur" }],
+};
+const priceDialogDefaultUpstream = ref<number | null>(null);
 const regions = computed(() => catalog.value.regions || []);
 const regionOptions = computed(() => regions.value.map((item) => item.region || "").filter(Boolean));
 const gpuModelOptions = computed(() => Array.from(new Set(regions.value.flatMap((region) => gpuSpecs(region).map((spec) => spec.gpuModel || "")).filter(Boolean))).sort());
@@ -226,6 +312,16 @@ const availableInstanceTotal = computed(() => regions.value.reduce(
   0,
 ));
 
+const snapshotStatus = computed(() => {
+  const statusMap: Record<string, string> = {
+    ok: "数据库快照",
+    missing: "暂无快照",
+    invalid: "快照解析失败",
+    refreshed: "已刷新",
+  };
+  return statusMap[catalog.value.snapshotStatus || ""] || "数据库快照";
+});
+
 const loadCatalog = async () => {
   loading.value = true;
   errorMessage.value = "";
@@ -244,8 +340,86 @@ const loadCatalog = async () => {
   }
 };
 
+const refreshCatalog = async () => {
+  refreshing.value = true;
+  try {
+    const response = await refreshGpuCatalogApi();
+    const data = response?.data || {};
+    catalog.value = { ...data, regions: Array.isArray(data.regions) ? data.regions : [] };
+    const firstAvailableRegion = regions.value.find((item) => !item.error)?.region;
+    activeRegions.value = firstAvailableRegion ? [firstAvailableRegion] : [];
+    ElMessage.success("火山云 GPU 目录已刷新");
+  } catch (error: any) {
+    ElMessage.error(error?.message || "火山云 GPU 目录刷新失败");
+  } finally {
+    refreshing.value = false;
+  }
+};
+
 const resetFilters = () => {
   filters.value = { region: "", gpuModel: "", gpuCount: "", instanceType: "" };
+};
+
+const openPriceDialog = (instance: InstanceType, spec: GpuSpec, billingType: "on_demand" | "monthly") => {
+  const ownerRegion = filteredRegions.value.find((region) =>
+    gpuSpecs(region).some((item) => instanceTypes(item).some((candidate) => candidate.instanceTypeId === instance.instanceTypeId)));
+  const upstreamPrice = billingType === "monthly"
+    ? priceNumber(instance.priceMonthly) ?? priceNumber(spec.priceMonthly)
+    : priceNumber(instance.price) ?? priceNumber(spec.price);
+  const configuredPrice = billingType === "monthly"
+    ? priceNumber(instance.salePriceMonthly) ?? priceNumber(instance.priceMonthly) ?? priceNumber(spec.priceMonthly)
+    : priceNumber(instance.salePrice) ?? priceNumber(instance.price) ?? priceNumber(spec.price);
+  priceForm.value = {
+    id: billingType === "monthly" ? instance.monthlyPriceConfigId : instance.hourlyPriceConfigId,
+    regionCode: String(ownerRegion?.region || ""),
+    instanceTypeId: String(instance.instanceTypeId || ""),
+    gpuModel: String(spec.gpuModel || ""),
+    gpuMemory: spec.gpuMemory,
+    gpuCount: instance.gpuCount || 0,
+    billingType,
+    upstreamPrice,
+    salePrice: configuredPrice,
+    status: 1,
+    remark: "",
+  };
+  priceDialogDefaultUpstream.value = upstreamPrice;
+  priceDialogVisible.value = true;
+};
+
+const savePrice = async () => {
+  await priceFormRef.value?.validate();
+  savingPrice.value = true;
+  try {
+    await volcanoPriceSaveApi({
+      ...priceForm.value,
+      id: priceForm.value.id == null ? undefined : priceForm.value.id,
+      salePrice: Number(priceForm.value.salePrice),
+      upstreamPrice: priceForm.value.upstreamPrice == null ? undefined : Number(priceForm.value.upstreamPrice),
+    });
+    ElMessage.success("售价已保存");
+    priceDialogVisible.value = false;
+    await loadCatalog();
+  } catch (error: any) {
+    ElMessage.error(error?.message || "售价保存失败");
+  } finally {
+    savingPrice.value = false;
+  }
+};
+
+const restoreDefault = async (instance: InstanceType, billingType: "on_demand" | "monthly") => {
+  const id = billingType === "monthly" ? instance.monthlyPriceConfigId : instance.hourlyPriceConfigId;
+  if (!id) {
+    ElMessage.info("当前已是火山默认价");
+    return;
+  }
+  try {
+    await ElMessageBox.confirm("恢复后将使用火山实际价，是否继续？", "恢复默认价", { type: "warning" });
+    await volcanoPriceDeleteApi(id);
+    ElMessage.success("已恢复默认价");
+    await loadCatalog();
+  } catch (error: any) {
+    if (error !== "cancel" && error?.message !== "cancel") ElMessage.error(error?.message || "恢复默认价失败");
+  }
 };
 
 const gpuSpecs = (region: Region) => Array.isArray(region.gpuSpecs) ? region.gpuSpecs : [];
@@ -270,6 +444,17 @@ const priceNumber = (value: PriceValue | number | string | null | undefined): nu
   if (value.available === false) return null;
   const number = Number(value.unitPrice ?? (value as any).unit_price ?? (value as any).discountAmount);
   return Number.isFinite(number) && number > 0 ? number : null;
+};
+const priceDifferenceText = (
+  sale: PriceValue | number | string | null | undefined,
+  upstream: PriceValue | number | string | null | undefined,
+  fallback?: PriceValue | number | string | null,
+) => {
+  const saleNumber = priceNumber(sale);
+  const upstreamNumber = priceNumber(upstream) ?? priceNumber(fallback);
+  if (saleNumber === null || upstreamNumber === null) return "--";
+  const difference = Number((saleNumber - upstreamNumber).toFixed(4));
+  return difference === 0 ? "¥0" : `${difference > 0 ? "+" : ""}¥${difference.toFixed(2)}`;
 };
 const formatTime = (value?: string) => value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : "--";
 

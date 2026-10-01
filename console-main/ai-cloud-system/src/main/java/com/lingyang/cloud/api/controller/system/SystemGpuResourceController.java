@@ -65,6 +65,9 @@ public class SystemGpuResourceController {
     @Resource
     private GpuComponentService gpuComponentService;
 
+    @Resource
+    private VolcanoGpuSalePriceService volcanoGpuSalePriceService;
+
     // ==================== GPU资源管理 ====================
 
     @GetMapping("/resource/page")
@@ -351,10 +354,62 @@ public class SystemGpuResourceController {
     }
 
     @GetMapping("/volcano/catalog")
-    @Operation(summary = "火山云 GPU 目录")
-    @Log(value = "火山云 GPU 目录", businessType = BusinessType.GET)
+    @Operation(summary = "火山云 GPU 目录快照")
+    @Log(value = "火山云 GPU 目录快照", businessType = BusinessType.GET)
     public Result<JSONObject> volcanoGpuCatalog() {
-        return Result.success(gpuSchedulerApiClient.getGpuCatalog());
+        return Result.success(volcanoGpuSalePriceService.getStoredCatalog("monthly"));
+    }
+
+    @PostMapping("/volcano/catalog/refresh")
+    @Operation(summary = "刷新火山云 GPU 目录")
+    @Log(value = "刷新火山云 GPU 目录", businessType = BusinessType.UPDATE)
+    public Result<JSONObject> refreshVolcanoGpuCatalog() {
+        return Result.success(volcanoGpuSalePriceService.refreshCatalog("monthly"));
+    }
+
+    @GetMapping("/volcano/price/page")
+    @Operation(summary = "火山云GPU售价分页列表")
+    @Log(value = "火山云GPU售价列表", businessType = BusinessType.GET)
+    public Result<PageResult<VolcanoGpuSalePriceVO>> volcanoPricePage(
+            @RequestParam(required = false) String regionCode,
+            @RequestParam(required = false) String instanceTypeId,
+            @RequestParam(required = false) String gpuModel,
+            @RequestParam(required = false) String billingType,
+            @RequestParam(required = false) Integer status,
+            PageQuery pageQuery) {
+        return Result.success(volcanoGpuSalePriceService.getPricePage(
+                pageQuery, regionCode, instanceTypeId, gpuModel, billingType, status));
+    }
+
+    @GetMapping("/volcano/price/{id}")
+    @Operation(summary = "火山云GPU售价详情")
+    @Log(value = "火山云GPU售价详情", businessType = BusinessType.GET)
+    public Result<VolcanoGpuSalePriceVO> volcanoPriceDetail(@PathVariable Long id) {
+        return Result.success(volcanoGpuSalePriceService.getById(id));
+    }
+
+    @PostMapping("/volcano/price/save")
+    @Operation(summary = "保存火山云GPU售价")
+    @Log(value = "保存火山云GPU售价", businessType = BusinessType.UPDATE)
+    public Result<Void> volcanoPriceSave(@RequestBody @Valid VolcanoGpuSalePriceEdit edit) {
+        volcanoGpuSalePriceService.saveOrUpdate(edit);
+        return Result.success();
+    }
+
+    @GetMapping("/volcano/price/status")
+    @Operation(summary = "修改火山云GPU售价状态")
+    @Log(value = "修改火山云GPU售价状态", businessType = BusinessType.UPDATE)
+    public Result<Void> volcanoPriceStatus(@RequestParam Long id, @RequestParam Integer status) {
+        volcanoGpuSalePriceService.updateStatus(id, status);
+        return Result.success();
+    }
+
+    @DeleteMapping("/volcano/price/{id}")
+    @Operation(summary = "恢复火山云GPU默认价")
+    @Log(value = "恢复火山云GPU默认价", businessType = BusinessType.DELETE)
+    public Result<Void> volcanoPriceDelete(@PathVariable Long id) {
+        volcanoGpuSalePriceService.restoreDefaultPrice(id);
+        return Result.success();
     }
 
     @GetMapping("/cluster/node/page")

@@ -347,6 +347,8 @@ const sortOrder = ref('asc')
 const currentPage = ref(1)
 const pageSize = ref(10)
 
+const volcanoSupportedBillingTypes = new Set(['on_demand', 'hourly', 'monthly'])
+
 const regionOptions = computed<GpuRegionItem[]>(() => {
   const merged = new Map<string, GpuRegionItem>()
   for (const item of baseRegionOptions.value) merged.set(item.regionCode, item)
@@ -399,7 +401,8 @@ const selectedRegionName = computed(() => {
 
 function hasCurrentExternalPrice(item: GpuMarketItem) {
   if (item.source !== 'volcano') return true
-  const value = filters.billingType === 'monthly' ? item.priceMonthly : item.price
+  if (!volcanoSupportedBillingTypes.has(filters.billingType)) return false
+  const value = filters.billingType === 'monthly' ? item.salePriceMonthly : item.salePrice
   const price = resolveExternalPrice(value)
   return price != null && price > 0
 }
@@ -426,12 +429,13 @@ const visibleGpuList = computed(() => filteredGpuList.value.slice(
 const total = computed(() => filteredGpuList.value.length)
 
 const volcanoGpuList = computed(() => {
+  if (!volcanoSupportedBillingTypes.has(filters.billingType)) return []
   const rows: GpuMarketItem[] = []
   for (const region of volcanoCatalog.value.regions || []) {
     for (const spec of region.gpuSpecs || []) {
       for (const item of spec.instanceTypes || []) {
-        const hourlyPrice = resolveExternalPrice(item.price, spec.price)
-        const monthlyPrice = resolveExternalPrice(item.priceMonthly, spec.priceMonthly)
+        const hourlyPrice = resolveExternalPrice(item.salePrice, item.price ?? spec.price)
+        const monthlyPrice = resolveExternalPrice(item.salePriceMonthly, item.priceMonthly ?? spec.priceMonthly)
         rows.push({
           resourceId: 0,
           resourceNo: item.instanceTypeId || '',
@@ -451,11 +455,13 @@ const volcanoGpuList = computed(() => {
           systemDisk: '', dataDisk: '', expandable: '', gpuDriver: '', cudaVersion: '',
           price: hourlyPrice == null ? '' : String(hourlyPrice),
           priceMonthly: monthlyPrice == null ? '' : String(monthlyPrice),
+          salePrice: hourlyPrice,
+          salePriceMonthly: monthlyPrice,
           discountPrice: '', discountRate: '', rentableCount: 1,
           source: 'volcano',
           instanceTypeId: item.instanceTypeId || '',
           gpuCount: item.gpuCount || 0,
-          volcanoPrice: filters.billingType === 'monthly' ? item.priceMonthly : item.price,
+          volcanoPrice: filters.billingType === 'monthly' ? item.salePriceMonthly : item.salePrice,
         } as GpuMarketItem)
       }
     }
@@ -525,6 +531,10 @@ watch(() => selectedGpu.value?.rentableCount, (count) => {
 
 watch(() => filters.billingType, () => {
   if (selectedGpu.value?.source === 'volcano') {
+    if (!volcanoSupportedBillingTypes.has(filters.billingType)) {
+      selectedGpu.value = null
+      return
+    }
     const currentKey = getGpuKey(selectedGpu.value)
     selectedGpu.value = volcanoGpuList.value.find((item) => getGpuKey(item) === currentKey) || selectedGpu.value
   }
@@ -599,6 +609,10 @@ async function loadGpuList() {
 }
 
 async function loadVolcanoCatalog() {
+  if (!volcanoSupportedBillingTypes.has(filters.billingType)) {
+    volcanoCatalog.value = { regions: [] }
+    return
+  }
   try {
     const res = await getVolcanoGpuCatalog(filters.billingType)
     if (res.code === 200 && res.data) {
@@ -796,9 +810,9 @@ function cacheOrderDraft(resourceId: number) {
     discountAmount: discountAmount.value,
     totalAmount: totalAmount.value,
     prices: selectedGpu.value.source === 'volcano' ? [
-      { billingType: 'on_demand', billingTypeName: '按量计费', unitPrice: selectedGpu.value.price },
-      { billingType: 'hourly', billingTypeName: '按小时', unitPrice: selectedGpu.value.price },
-      { billingType: 'monthly', billingTypeName: '包月', unitPrice: selectedGpu.value.priceMonthly },
+      { billingType: 'on_demand', billingTypeName: '按量计费', unitPrice: selectedGpu.value.salePrice ?? selectedGpu.value.price },
+      { billingType: 'hourly', billingTypeName: '按小时', unitPrice: selectedGpu.value.salePrice ?? selectedGpu.value.price },
+      { billingType: 'monthly', billingTypeName: '包月', unitPrice: selectedGpu.value.salePriceMonthly ?? selectedGpu.value.priceMonthly },
     ].filter((item) => resolveExternalPrice(item.unitPrice) != null) : undefined,
     regionCode: filters.region || selectedGpu.value.regionCode || '',
     regionName: selectedRegionName.value || selectedGpu.value.region || '',
