@@ -289,28 +289,70 @@
           <div class="config-row">
             <div class="row-label">
               <strong>系统盘</strong>
-              <span>随实例创建</span>
+              <span>随实例创建，可按创建接口传入容量</span>
             </div>
-            <div class="row-control storage-line">
-              <div class="storage-type">系统盘</div>
-              <strong>{{ systemDiskText }}</strong>
+            <div class="row-control storage-control">
+              <div class="storage-line">
+                <div class="storage-type">系统盘</div>
+                <el-input-number v-model="storageForm.systemDiskGb" class="storage-input" :min="1" :max="65536" />
+                <span>GiB</span>
+              </div>
             </div>
           </div>
 
           <div class="config-row">
             <div class="row-label">
               <strong>数据盘</strong>
-              <span>保存模型和训练数据</span>
+              <span>保存模型和训练数据；系统盘与数据盘合计最低 100G</span>
             </div>
             <div class="row-control storage-control">
               <div class="storage-line">
                 <div class="storage-type">数据盘</div>
-                <strong>{{ dataDiskText }}</strong>
+                <el-input-number v-model="storageForm.dataDiskGb" class="storage-input" :min="0" :max="65536" />
+                <span>GiB</span>
               </div>
-              <el-checkbox v-if="maxExpandSize > 0" v-model="needExpand">扩容数据盘</el-checkbox>
+              <div class="storage-line expandable-disk-line">
+                <div class="storage-type">可扩展上限</div>
+                <el-input-number v-model="storageForm.dataDiskExpandableGb" class="storage-input" :min="storageForm.dataDiskGb" :max="65536" />
+                <span>GiB</span>
+              </div>
+              <el-checkbox v-model="needExpand">创建时扩容数据盘</el-checkbox>
               <div v-if="needExpand" class="expand-input">
-                <el-input-number v-model="expandSize" :min="1" :max="maxExpandSize" />
-                <span>GB，可扩容上限 {{ expandableText }}</span>
+                <el-input-number v-model="expandSize" :min="1" :max="maxExpandSize || undefined" />
+                <span>GiB，目标容量 {{ expandedDataDiskText }}</span>
+              </div>
+              <el-alert
+                v-if="diskCapacityTooSmall"
+                :title="`磁盘资源最低需要 100G（当前合计 ${projectedDiskCapacityGb}G）`"
+                type="warning"
+                show-icon
+                :closable="false"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="config-section public-network-section">
+          <div class="section-title">公网网络</div>
+          <div class="config-row">
+            <div class="row-label">
+              <strong>公网 IP</strong>
+              <span>用于 SSH、远程访问和公网服务</span>
+            </div>
+            <div class="row-control">
+              <el-switch v-model="publicIpEnabled" active-text="购买公网 IP" inactive-text="不购买" />
+              <div v-if="publicIpEnabled" class="public-network-options">
+                <div class="public-charge-options">
+                  <button type="button" class="public-charge-option" :class="{ active: bandwidthChargeType === 'PayByTraffic' }" @click="bandwidthChargeType = 'PayByTraffic'">
+                    <strong>按流量计费</strong><span>按实际出公网流量后付费</span>
+                  </button>
+                  <button type="button" class="public-charge-option" :class="{ active: bandwidthChargeType === 'PayByBandwidth' }" @click="bandwidthChargeType = 'PayByBandwidth'">
+                    <strong>按带宽计费</strong><span>按带宽上限计费，适合稳定公网服务</span>
+                  </button>
+                </div>
+                <div class="public-bandwidth-control"><span>带宽上限</span><el-input-number v-model="bandwidthMbps" :min="1" :max="200" :step="1" /><span>Mbps</span></div>
+                <div class="public-price-hint" v-if="eipPriceText">{{ eipPriceText }}</div>
+                <div class="hint-line">公网 IP 开启后随实例创建；按流量模式按实际出方向流量后付费，按带宽模式按带宽上限计费。</div>
               </div>
             </div>
           </div>
@@ -361,8 +403,10 @@
           <div class="summary-block">
             <div class="summary-block-title">系统配置</div>
             <div class="summary-line image-line"><span>镜像</span><strong>{{ selectedImageSummary }}</strong></div>
-            <div class="summary-line"><span>系统盘</span><strong>{{ systemDiskText }}</strong></div>
+            <div class="summary-line"><span>系统盘</span><strong>{{ storageForm.systemDiskGb ? `${storageForm.systemDiskGb}Gi` : '待填写' }}</strong></div>
             <div class="summary-line"><span>数据盘</span><strong>{{ instanceDataDisk }}</strong></div>
+            <div class="summary-line"><span>公网 IP</span><strong>{{ publicIpEnabled ? `${bandwidthChargeType === 'PayByTraffic' ? '按流量' : '按带宽'} / ${bandwidthMbps} Mbps` : '不购买' }}</strong></div>
+            <div v-if="publicIpEnabled && eipPriceText" class="summary-line"><span>公网价格</span><strong>{{ eipPriceText }}</strong></div>
           </div>
 
           <div class="summary-block price-block">
@@ -430,10 +474,16 @@
             <span class="final">¥{{ formatMoney(feeResult?.total) }}</span>
           </div>
           <div class="fee-detail-row">
-            <span>数据盘费用</span>
-            <span>¥{{ formatMoney(feeResult?.diskFee ?? 0) }}</span>
-            <span class="discount">-¥0.00</span>
-            <span class="final">¥{{ formatMoney(feeResult?.diskFee ?? 0) }}</span>
+            <span>数据盘配置</span>
+            <span>{{ instanceDataDisk }}</span>
+            <span class="discount">--</span>
+            <span class="final">随创建请求提交</span>
+          </div>
+          <div class="fee-detail-row public-fee-row">
+            <span>公网费用</span>
+            <span>{{ publicIpEnabled ? (eipPriceText || (bandwidthChargeType === 'PayByTraffic' ? '按实际流量后付费' : `按 ${bandwidthMbps} Mbps 带宽计费`)) : '未购买' }}</span>
+            <span class="discount">--</span>
+            <span class="final">{{ publicIpEnabled ? `¥${formatMoney(publicFixedFee)}` : '--' }}</span>
           </div>
         </div>
         <el-divider />
@@ -506,6 +556,8 @@ import {
   type PodStatusResult,
   type PodCreateRequest
 } from '@/api/computeRent'
+import { gpuBillingLabelMap } from '@/utils/gpuBilling'
+import { MIN_DISK_CAPACITY_GB, totalDiskCapacityGb as calculateTotalDiskCapacityGb } from '@/utils/diskCapacity'
 
 // ==================== 路由和导航 ====================
 
@@ -574,6 +626,14 @@ const selectedBasePythonVersion = ref('')
 const baseMirrorPanelVisible = ref(false)
 const needExpand = ref(false)
 const expandSize = ref(1)
+const storageForm = reactive({
+  systemDiskGb: 30,
+  dataDiskGb: 50,
+  dataDiskExpandableGb: 100
+})
+const publicIpEnabled = ref(true)
+const bandwidthChargeType = ref<'PayByTraffic' | 'PayByBandwidth'>('PayByTraffic')
+const bandwidthMbps = ref(5)
 const showFeeDetail = ref(false)
 const agreed = ref(false)
 const agreementSectionRef = ref<HTMLElement | null>(null)
@@ -593,6 +653,7 @@ const isOrderSubmitting = computed(() => submitting.value && orderSubmittingView
 
 interface OrderDraft {
   source?: string
+  draftVersion?: number
   resourceId?: number
   billingType?: BillingType
   billingTypeName?: string
@@ -608,6 +669,9 @@ interface OrderDraft {
   zoneCode?: string
   zoneName?: string
   resource?: Record<string, any>
+  publicIpEnabled?: boolean
+  bandwidthChargeType?: 'PayByTraffic' | 'PayByBandwidth'
+  bandwidthMbps?: number
 }
 
 const orderDraft = ref<OrderDraft | null>(null)
@@ -630,11 +694,7 @@ interface BaseMirrorFramework {
 // ==================== 计算属性 ====================
 
 const billingTypeNameMap: Record<string, string> = {
-  on_demand: '按量计费',
-  hourly: '按小时',
-  daily: '包日',
-  weekly: '包周',
-  monthly: '包月'
+  ...gpuBillingLabelMap
 }
 
 const billingUnitMap: Record<string, string> = {
@@ -710,22 +770,30 @@ const instanceMemory = computed(() => {
   return `${Math.floor((num / gpuCount) * rentConfig.quantity)}GB`
 })
 
-const systemDiskText = computed(() => formatResourceCapacity(gpuResource.value?.systemDisk))
-
-const dataDiskText = computed(() => formatResourceCapacity(gpuResource.value?.dataDisk))
-
-const expandableText = computed(() => formatResourceCapacity(gpuResource.value?.expandable))
+const expandedDataDiskText = computed(() => {
+  const base = storageForm.dataDiskGb
+  return base > 0 && expandSize.value > 0 ? `${base + expandSize.value} GiB` : `${base} GiB`
+})
 
 const instanceDataDisk = computed(() => {
-  const base = dataDiskText.value
+  const base = `${storageForm.dataDiskGb}Gi`
   if (!needExpand.value || expandSize.value <= 0) {
     return base
   }
-  return `${base} + 扩容 ${expandSize.value} GB`
+  return expandedDataDiskText.value
 })
 
+const projectedDiskCapacityGb = computed(() => calculateTotalDiskCapacityGb(
+  storageForm.systemDiskGb,
+  storageForm.dataDiskGb,
+  needExpand.value && expandSize.value > 0 ? expandSize.value : 0,
+))
+const diskCapacityTooSmall = computed(() => projectedDiskCapacityGb.value < MIN_DISK_CAPACITY_GB)
+
 const maxExpandSize = computed(() => {
-  return capacityToGb(gpuResource.value?.expandable)
+  const expandable = storageForm.dataDiskExpandableGb
+  const current = storageForm.dataDiskGb
+  return Math.max(expandable - current, 0)
 })
 
 const filteredMirrors = computed(() => {
@@ -857,6 +925,9 @@ const canSubmit = computed(() => {
   if (!currentPriceItem.value) return false
   if (!rentConfig.quantity || rentConfig.quantity <= 0) return false
   if (!rentConfig.duration || rentConfig.duration <= 0) return false
+  if (!storageForm.systemDiskGb || storageForm.dataDiskGb < 0 || storageForm.dataDiskExpandableGb < storageForm.dataDiskGb) return false
+  if (diskCapacityTooSmall.value) return false
+  if (needExpand.value && (maxExpandSize.value <= 0 || expandSize.value <= 0 || expandSize.value > maxExpandSize.value)) return false
   if (isBalanceInsufficient.value) return false
   return true
 })
@@ -869,6 +940,10 @@ const submitDisabledReason = computed(() => {
   if (!currentPriceItem.value) return '当前计费方式未维护有效价格'
   if (!rentConfig.quantity || rentConfig.quantity <= 0) return 'GPU数量无效'
   if (!rentConfig.duration || rentConfig.duration <= 0) return '购买时长无效'
+  if (!storageForm.systemDiskGb || storageForm.dataDiskGb < 0 || storageForm.dataDiskExpandableGb < storageForm.dataDiskGb) return '请填写有效的系统盘、数据盘和可扩展上限'
+  if (diskCapacityTooSmall.value) return `磁盘资源最低需要 100G（当前合计 ${projectedDiskCapacityGb.value}G）`
+  if (needExpand.value && maxExpandSize.value <= 0) return '可扩展上限不能小于当前数据盘容量'
+  if (needExpand.value && (expandSize.value <= 0 || expandSize.value > maxExpandSize.value)) return `扩容容量必须在 1-${maxExpandSize.value} GiB 之间`
   if (isBalanceInsufficient.value) return '可用余额不足，请充值'
   return ''
 })
@@ -890,6 +965,28 @@ const createProgressPercent = computed(() => {
 })
 
 const normalizedPodStatus = computed(() => String(podStatus.value?.status || '').trim().toLowerCase())
+
+const eipPriceText = computed(() => {
+  if (!publicIpEnabled.value) return ''
+  const pricing = feeResult.value?.eipPricing as any
+  if (!pricing?.available) return ''
+  const items = Array.isArray(pricing.items) ? pricing.items : []
+  if (pricing.billingType === 'traffic') {
+    const traffic = items.find((item: any) => item.key === 'traffic')
+    return traffic?.available ? `流量 ¥${formatMoney(traffic.unitPrice)}/GB，绑定期间 IP 配置费 ¥0/小时` : '按流量计费，暂无报价'
+  }
+  const bandwidth = items.find((item: any) => item.key === 'bandwidth')
+  return bandwidth?.available ? `带宽 ¥${formatMoney(bandwidth.unitPrice)}/Mbps/小时，共 ${pricing.bandwidthMbps} Mbps` : '按带宽计费，暂无报价'
+})
+
+const publicFixedFee = computed(() => {
+  const estimate = feeResult.value?.eipPricing?.estimate as any
+  if (!publicIpEnabled.value || !estimate) return 0
+  const type = rentConfig.billingType
+  if (type === 'monthly') return Number(estimate.monthlyFixed || 0) * rentConfig.duration * rentConfig.quantity
+  const hours = type === 'daily' ? rentConfig.duration * 24 : type === 'weekly' ? rentConfig.duration * 24 * 7 : rentConfig.duration
+  return Number(estimate.hourlyFixed || 0) * hours * rentConfig.quantity
+})
 
 // 创建接口成功返回即表示后台已受理资源创建，后续状态由实例列表继续跟踪。
 const isVolcanoOrder = computed(() => createdOrder.value != null && gpuResource.value?.source === 'volcano')
@@ -1132,21 +1229,26 @@ function syncReturnedPricing(status: any) {
   }
 }
 
-function formatResourceCapacity(value: unknown) {
+function capacityToGb(value: unknown): number | null {
   const text = String(value ?? '').trim()
-  return text || '接口未提供'
-}
-
-function capacityToGb(value: unknown) {
-  const text = String(value ?? '').trim()
-  const match = text.match(/([\d.]+)\s*(TiB|TB|GiB|GB)?/i)
-  if (!match) return 0
+  if (!text) return null
+  const match = text.match(/([\d.]+)\s*(TiB|Ti|TB|T|GiB|Gi|GB|G)?/i)
+  if (!match) return null
 
   const amount = Number(match[1])
-  if (!Number.isFinite(amount) || amount <= 0) return 0
+  if (!Number.isFinite(amount) || amount < 0) return null
 
   const unit = (match[2] || 'GB').toUpperCase()
-  return Math.floor(amount * (unit === 'TB' || unit === 'TIB' ? 1024 : 1))
+  return Math.floor(amount * (unit === 'TB' || unit === 'TIB' || unit === 'T' || unit === 'TI' ? 1024 : 1))
+}
+
+function capacityOrFallback(value: unknown, fallback: number) {
+  const parsed = capacityToGb(value)
+  return parsed == null ? fallback : parsed
+}
+
+function firstPresent(...values: unknown[]) {
+  return values.find(value => value !== undefined && value !== null && String(value).trim() !== '')
 }
 
 async function loadGpuResource() {
@@ -1263,6 +1365,40 @@ function applyRouteConfig() {
   const duration = Number(draft?.duration || route.query.duration || 1)
   if (Number.isFinite(quantity) && quantity > 0) rentConfig.quantity = Math.floor(quantity)
   if (Number.isFinite(duration) && duration > 0) rentConfig.duration = Math.floor(duration)
+  // 公网 IP 默认随实例开通；仅当新版本订单草稿明确关闭时保持关闭。
+  // 旧草稿未记录 draftVersion，其中的 false 来自旧默认值，不能视为用户主动关闭。
+  const draftVersion = Number(draft?.draftVersion) || 0
+  publicIpEnabled.value = draftVersion >= 2 ? draft?.publicIpEnabled !== false : true
+  bandwidthChargeType.value = draft?.bandwidthChargeType === 'PayByBandwidth' ? 'PayByBandwidth' : 'PayByTraffic'
+  bandwidthMbps.value = Number(draft?.bandwidthMbps) || 5
+  // 资源目录历史上使用 expandable，创建接口使用 dataDiskExpandable；同时兼容
+  // 接口文档允许的 snake_case，避免已有规格回填时退回到默认值。
+  const resource = (gpuResource.value || {}) as Record<string, any>
+  const draftResource = (draft?.resource || {}) as Record<string, any>
+  const systemDiskValue = firstPresent(
+    draftResource.systemDisk,
+    draftResource.system_disk,
+    resource.systemDisk,
+    resource.system_disk
+  )
+  const dataDiskValue = firstPresent(
+    draftResource.dataDisk,
+    draftResource.data_disk,
+    resource.dataDisk,
+    resource.data_disk
+  )
+  const expandableValue = firstPresent(
+    draftResource.dataDiskExpandable,
+    draftResource.data_disk_expandable,
+    draftResource.expandable,
+    resource.dataDiskExpandable,
+    resource.data_disk_expandable,
+    resource.expandable
+  )
+  storageForm.systemDiskGb = capacityOrFallback(systemDiskValue, 30)
+  storageForm.dataDiskGb = capacityOrFallback(dataDiskValue, 50)
+  storageForm.dataDiskExpandableGb = capacityOrFallback(expandableValue, Math.max(storageForm.dataDiskGb, 100))
+  if (storageForm.dataDiskExpandableGb < storageForm.dataDiskGb) storageForm.dataDiskExpandableGb = storageForm.dataDiskGb
 }
 
 function readOrderDraft(resourceId: number): OrderDraft | null {
@@ -1360,7 +1496,11 @@ async function calculateFee() {
         podCreateRequest: request,
         billingType: rentConfig.billingType,
         quantity: rentConfig.quantity,
-        duration: rentConfig.duration
+        duration: rentConfig.duration,
+        publicIpEnabled: publicIpEnabled.value,
+        bandwidthChargeType: publicIpEnabled.value ? bandwidthChargeType.value : undefined,
+        bandwidthMbps: publicIpEnabled.value ? bandwidthMbps.value : undefined,
+        region: gpuResource.value.regionCode || gpuResource.value.region
       })
       if (seq !== feeCalculateSeq) return
       if (externalRes.code === 200 && externalRes.data) {
@@ -1388,7 +1528,11 @@ async function calculateFee() {
       billingType: rentConfig.billingType,
       quantity: rentConfig.quantity,
       duration: rentConfig.duration,
-      expandSize: needExpand.value ? expandSize.value : undefined
+      expandSize: needExpand.value ? expandSize.value : undefined,
+      publicIpEnabled: publicIpEnabled.value,
+      bandwidthChargeType: publicIpEnabled.value ? bandwidthChargeType.value : undefined,
+      bandwidthMbps: publicIpEnabled.value ? bandwidthMbps.value : undefined,
+      region: gpuResource.value.regionCode || gpuResource.value.region
     })
     if (seq !== feeCalculateSeq) return
 
@@ -1437,9 +1581,9 @@ function buildPodCreateRequest(options: { price?: any; fee?: FeeResult | null } 
   const hourFactor = billingHourFactorMap[rentConfig.billingType] || 1
   const pricePerHour = unitPrice / hourFactor
   const discountPrice = discountUnitPrice / hourFactor
-  const dataDisk = needExpand.value && expandSize.value > 0
-    ? `${resource.dataDisk || ''} + ${expandSize.value} GB`
-    : resource.dataDisk || ''
+  const dataDiskGb = needExpand.value && expandSize.value > 0
+    ? storageForm.dataDiskGb + expandSize.value
+    : storageForm.dataDiskGb
 
   return {
     gpuSpec: {
@@ -1456,9 +1600,9 @@ function buildPodCreateRequest(options: { price?: any; fee?: FeeResult | null } 
       cpu: String(instanceCpu.value || resource.cpuCores || ''),
       cpuModel: resource.cpuModel || '',
       memory: instanceMemory.value || resource.memory || '',
-      systemDisk: resource.systemDisk || '',
-      dataDisk,
-      dataDiskExpandable: resource.expandable || ''
+      systemDisk: `${storageForm.systemDiskGb}Gi`,
+      dataDisk: `${dataDiskGb}Gi`,
+      dataDiskExpandable: `${storageForm.dataDiskExpandableGb}Gi`
     },
     pricing: {
       unitPrice,
@@ -1474,7 +1618,12 @@ function buildPodCreateRequest(options: { price?: any; fee?: FeeResult | null } 
     zone: resource.zoneCode || resource.zone || resource.regionCode || resource.region || '',
     machineId: resource.machineId || '',
     gpuDriver: resource.gpuDriver || '',
-    cudaVersion: resource.cudaVersion || ''
+    cudaVersion: resource.cudaVersion || '',
+    ...(publicIpEnabled.value ? {
+      publicIpEnabled: true,
+      bandwidthChargeType: bandwidthChargeType.value,
+      bandwidthMbps: bandwidthMbps.value
+    } : {})
   }
 }
 
@@ -1513,6 +1662,10 @@ function isTechnicalCreateError(message: string) {
 }
 
 async function handleSubmit() {
+  if (diskCapacityTooSmall.value) {
+    ElMessage.warning(`磁盘资源最低需要 100G（当前合计 ${projectedDiskCapacityGb.value}G）`)
+    return
+  }
   if (!canSubmit.value) return
 
   if (!gpuResource.value) {
@@ -1550,6 +1703,10 @@ async function handleSubmit() {
       billingType: rentConfig.billingType,
       quantity: rentConfig.quantity,
       duration: rentConfig.duration,
+      publicIpEnabled: publicIpEnabled.value,
+      bandwidthChargeType: publicIpEnabled.value ? bandwidthChargeType.value : undefined,
+      bandwidthMbps: publicIpEnabled.value ? bandwidthMbps.value : undefined,
+      region: gpuResource.value.regionCode || gpuResource.value.region,
       agreeProtocol: true,
       podCreateRequest: confirmedPodCreateRequest
     }
@@ -1623,6 +1780,13 @@ watch(
 )
 
 watch([needExpand, expandSize], () => {
+  calculateFee()
+})
+
+watch([publicIpEnabled, bandwidthChargeType, bandwidthMbps], () => {
+  if (publicIpEnabled.value) {
+    error.value = ''
+  }
   calculateFee()
 })
 
@@ -2808,6 +2972,54 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
+}
+
+.public-network-section {
+  .public-network-options {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 14px;
+    max-width: 720px;
+  }
+
+  .public-charge-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(210px, 1fr));
+    gap: 10px;
+  }
+
+  .public-charge-option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    min-height: 64px;
+    padding: 11px 14px;
+    border: 1px solid var(--aliyun-border);
+    background: #fff;
+    color: #111827;
+    cursor: pointer;
+    text-align: left;
+
+    span {
+      color: #7b8494;
+      font-size: 13px;
+    }
+
+    &.active {
+      border-color: var(--aliyun-primary);
+      background: var(--aliyun-tint);
+      box-shadow: inset 3px 0 0 var(--aliyun-primary);
+    }
+  }
+
+  .public-bandwidth-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #4b5563;
+  }
 }
 
 .storage-line {

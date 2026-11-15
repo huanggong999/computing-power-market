@@ -116,9 +116,9 @@
       <el-table-column label="计费" width="126">
         <template #default="{ row }">
           <div class="billing-cell">
-            <strong>{{ row.billingType === 'hourly' ? '按量计费' : '包年包月' }}</strong>
-            <span v-if="row.billingType === 'hourly'">￥{{ row.pricePerHour || 0 }}/时</span>
-            <span v-else>{{ row.expiredAt || '-' }}</span>
+            <strong>{{ getGpuBillingLabel(row.billingType) }}</strong>
+            <span v-if="isGpuPayAsYouGo(row.billingType) && row.pricePerHour != null">￥{{ row.pricePerHour }}/时</span>
+            <span v-else-if="!isGpuPayAsYouGo(row.billingType)">{{ row.expireTime || row.expiredAt || '-' }}</span>
           </div>
         </template>
       </el-table-column>
@@ -171,6 +171,8 @@
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item command="restart">重启</el-dropdown-item>
+                  <el-dropdown-item command="resize">资源管理</el-dropdown-item>
+                  <el-dropdown-item command="gpuResize">多卡变更</el-dropdown-item>
                   <el-dropdown-item command="resetPassword">重置密码</el-dropdown-item>
                   <el-dropdown-item command="setName">设置名称</el-dropdown-item>
                   <el-dropdown-item command="renew">续费</el-dropdown-item>
@@ -205,6 +207,7 @@ import { ArrowDown, Loading } from '@element-plus/icons-vue'
 import StatusTag from './StatusTag.vue'
 import { InstanceStatus } from '@/types/instance'
 import type { Instance } from '@/types/instance'
+import { getGpuBillingLabel, isGpuPayAsYouGo } from '@/utils/gpuBilling'
 
 interface Props {
   data: Instance[]

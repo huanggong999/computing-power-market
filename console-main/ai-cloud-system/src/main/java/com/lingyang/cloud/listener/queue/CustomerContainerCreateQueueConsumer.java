@@ -32,12 +32,12 @@ import com.volcengine.vpc.model.*;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -48,6 +48,9 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class CustomerContainerCreateQueueConsumer implements CacheQueueConsumer {
+    private static final int VOLUME_QUERY_MAX_ATTEMPTS = 20;
+    private static final long VOLUME_QUERY_INTERVAL_MILLIS = 30 * 1000L;
+
     @Resource
     private SysCustomerContainerMapper sysCustomerContainerMapper;
     @Resource
@@ -294,39 +297,15 @@ public class CustomerContainerCreateQueueConsumer implements CacheQueueConsumer 
                 customerInstancesEntity.setInstanceId(instanceIds.get(0));
                 eipEntity.setInstanceId(instanceIds.get(0));
                 eipEntity.setCustomerInstanceId(customerInstancesEntity.getId());
-                // 获取云盘信息
+                // 每台节点都有自己的云盘，不能复用第一台实例的 volumeId。
                 StorageEbsApi storageEbsApi = VoEngineApiClient.getStorageEbsApi(customerInstancesEntity.getRegion().getId());
-                DescribeVolumesRequest volumesRequest = new DescribeVolumesRequest();
-                volumesRequest.setInstanceId(instanceIds.get(0));
-                volumesRequest.setPageSize(100);
-                volumesRequest.setZoneId(customerInstancesEntity.getZoneId());
-                List<VolumeForDescribeVolumesOutput> volumes = storageEbsApi.describeVolumes(volumesRequest).getVolumes();
-                do {
-                    log.info("查询云盘信息未成功，再次查询");
-                    try {
-                        Thread.sleep(30*1000L);
-                        volumes = storageEbsApi.describeVolumes(volumesRequest).getVolumes();
-                        log.info("查询云盘信息： {} {} volumes:{}", messageContent, instanceIds, JSON.toJSONString(volumes));
-                    } catch (ApiException ignored) {
-                        log.info("容器查询云盘异常 msg: {}", ignored.getMessage());
-                        log.info("容器查询云盘异常 ignored: {}", messageContent, ignored);
-                    }
-                }while (volumes.isEmpty());
-                Map<String, List<VolumeForDescribeVolumesOutput>> kindVolumeMap = volumes.stream()
-                        .collect(Collectors.groupingBy(VolumeForDescribeVolumesOutput::getKind));
-                AtomicInteger volumeCount = new AtomicInteger(0);
-                List<String> finalInstanceIds = instanceIds;
-                customerVolumeList.forEach(e -> {
-                    List<VolumeForDescribeVolumesOutput> volumesOutputs = kindVolumeMap.get(e.getKind());
-                    if ("system".equals(e.getKind())) {
-                        e.setVolumeId(volumesOutputs.get(0).getVolumeId());
-                    } else {
-                        e.setVolumeId(volumesOutputs.get(volumeCount.getAndIncrement()).getVolumeId());
-                    }
-                    e.setCustomerId(customerInstancesEntity.getCustomerId());
-                    e.setInstanceId(finalInstanceIds.get(0));
-                    e.setCustomerInstanceId(customerInstancesEntity.getId());
-                });
+                List<Map<String, List<VolumeForDescribeVolumesOutput>>> volumesByInstance = new ArrayList<>(instanceIds.size());
+                for (String instanceId : instanceIds) {
+                    volumesByInstance.add(queryVolumesByKind(
+                            storageEbsApi, instanceId, customerInstancesEntity.getZoneId(), messageContent));
+                }
+                assignVolumeIds(customerVolumeList, volumesByInstance.get(0), instanceIds.get(0),
+                        customerInstancesEntity.getId(), customerInstancesEntity.getCustomerId());
                 sysCustomerVolumeMapper.batchUpdateById(customerVolumeList);
                 sysCustomerEipMapper.updateById(eipEntity);
                 sysCustomerInstancesMapper.updateById(customerInstancesEntity);
@@ -341,14 +320,18 @@ public class CustomerContainerCreateQueueConsumer implements CacheQueueConsumer 
                         e.setCustomerInstanceId(entity.getId());
                         e.setId(null);
                     });
+                    assignVolumeIds(sysCustomerVolumeEntities, volumesByInstance.get(i), instanceIds.get(i),
+                            entity.getId(), entity.getCustomerId());
                     sysCustomerVolumeMapper.batchInsert(sysCustomerVolumeEntities);
                 }
                 log.info("修改云盘成功");
             } catch (ApiException e) {
-                log.error("容器创建服务器异常: {}", messageContent, e);
+                log.error("容器云服务器或云盘创建失败，终止后续创建流程: {}", messageContent, e);
+                throw e;
             } catch (Exception e) {
-                log.error("容器创建服务器异常: {}", messageContent, e);
-                log.error("容器创建服务器异常msg: {}", e.getMessage());
+                log.error("容器云服务器或云盘创建失败，终止后续创建流程: {}, msg: {}",
+                        messageContent, e.getMessage(), e);
+                throw e;
             }
 
             //添加云服务器到节点池
@@ -549,6 +532,71 @@ public class CustomerContainerCreateQueueConsumer implements CacheQueueConsumer 
             vo.setSecurityGroupEntity(sysCustomerSecurityGroupEntities.get(0));
         }
         return vo;
+    }
+
+    private Map<String, List<VolumeForDescribeVolumesOutput>> queryVolumesByKind(
+            StorageEbsApi storageEbsApi, String instanceId, String zoneId, String messageContent)
+            throws ApiException, InterruptedException {
+        DescribeVolumesRequest volumesRequest = new DescribeVolumesRequest();
+        volumesRequest.setInstanceId(instanceId);
+        volumesRequest.setPageSize(100);
+        volumesRequest.setZoneId(zoneId);
+
+        List<VolumeForDescribeVolumesOutput> volumes = storageEbsApi.describeVolumes(volumesRequest).getVolumes();
+        int attempt = 0;
+        while (ObjectUtils.isEmpty(volumes)) {
+            if (++attempt >= VOLUME_QUERY_MAX_ATTEMPTS) {
+                throw new IllegalStateException("查询实例云盘超时，instanceId=" + instanceId);
+            }
+            log.info("实例云盘信息尚未就绪，等待后重试，message={}, instanceId={}, attempt={}",
+                    messageContent, instanceId, attempt);
+            Thread.sleep(VOLUME_QUERY_INTERVAL_MILLIS);
+            try {
+                volumes = storageEbsApi.describeVolumes(volumesRequest).getVolumes();
+            } catch (ApiException exception) {
+                log.warn("查询实例云盘异常，message={}, instanceId={}, error={}",
+                        messageContent, instanceId, exception.getMessage());
+            }
+        }
+        log.info("查询实例云盘成功，message={}, instanceId={}, volumes={}",
+                messageContent, instanceId, JSON.toJSONString(volumes));
+        return volumes.stream()
+                .filter(volume -> volume != null && StringUtils.isNotEmpty(volume.getKind()))
+                .collect(Collectors.groupingBy(VolumeForDescribeVolumesOutput::getKind));
+    }
+
+    static void assignVolumeIds(
+            List<SysCustomerVolumeEntity> customerVolumes,
+            Map<String, List<VolumeForDescribeVolumesOutput>> volumesByKind,
+            String instanceId,
+            Long customerInstanceId,
+            Long customerId) {
+        int dataVolumeIndex = 0;
+        Set<String> assignedVolumeIds = new HashSet<>();
+        for (SysCustomerVolumeEntity customerVolume : customerVolumes) {
+            List<VolumeForDescribeVolumesOutput> volumes = volumesByKind.get(customerVolume.getKind());
+            if (ObjectUtils.isEmpty(volumes)) {
+                throw new IllegalStateException("实例未查询到对应云盘，instanceId=" + instanceId
+                        + ", kind=" + customerVolume.getKind());
+            }
+
+            int volumeIndex = "system".equals(customerVolume.getKind()) ? 0 : dataVolumeIndex++;
+            if (volumeIndex >= volumes.size()) {
+                throw new IllegalStateException("实例云盘数量不足，instanceId=" + instanceId
+                        + ", kind=" + customerVolume.getKind() + ", requiredIndex=" + volumeIndex
+                        + ", actualCount=" + volumes.size());
+            }
+            String volumeId = volumes.get(volumeIndex).getVolumeId();
+            if (StringUtils.isEmpty(volumeId) || !assignedVolumeIds.add(volumeId)) {
+                throw new IllegalStateException("实例云盘ID异常，instanceId=" + instanceId
+                        + ", kind=" + customerVolume.getKind() + ", volumeId=" + volumeId);
+            }
+
+            customerVolume.setVolumeId(volumeId);
+            customerVolume.setInstanceId(instanceId);
+            customerVolume.setCustomerInstanceId(customerInstanceId);
+            customerVolume.setCustomerId(customerId);
+        }
     }
 
     private List<DataVolumeForCreateNodePoolInput> dataVolumes(List<SysCustomerVolumeEntity> customerVolumeList) {

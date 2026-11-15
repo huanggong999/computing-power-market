@@ -104,8 +104,9 @@ public class GpuPodServiceImpl implements GpuPodService {
         if (ObjectUtils.isNotEmpty(query.getBillingMode())) {
             params.put("billingMode", query.getBillingMode());
         }
-        params.put("pageNum", query.getPageNo());
-        params.put("pageSize", query.getPageSize());
+        // Fetch the complete tenant set so source filtering happens before pagination and totals.
+        params.put("pageNum", 1);
+        params.put("pageSize", 10000);
 
         // 调用外部API获取列表
         InstanceListResponse response = gpuPodApiClient.listInstances(tenantId, params);
@@ -114,11 +115,17 @@ public class GpuPodServiceImpl implements GpuPodService {
         long total = 0L;
 
         if (response != null && response.isSuccess() && response.getInstances() != null) {
-            total = response.getTotal() != null ? response.getTotal() : response.getInstances().size();
             for (InstanceListResponse.InstanceItem item : response.getInstances()) {
-                voList.add(convertItemToVO(item));
+                if (isGpuSource(item.getOrigin(), item.getGpuCount(), item.getGpuSpec())) {
+                    voList.add(convertItemToVO(item));
+                }
             }
+            total = voList.size();
         }
+
+        int from = Math.min((query.getPageNo() - 1) * query.getPageSize(), voList.size());
+        int to = Math.min(from + query.getPageSize(), voList.size());
+        voList = new ArrayList<>(voList.subList(from, to));
 
         PageResult<GpuPodInstanceVO> result = new PageResult<>();
         result.setList(voList);
@@ -208,6 +215,7 @@ public class GpuPodServiceImpl implements GpuPodService {
         // 优先从外部API获取最新状态
         InstanceResponse response = gpuPodApiClient.getInstance(id, tenantId);
         if (response != null && response.isSuccess()) {
+            ensureGpuSource(response);
             return convertResponseToVO(response);
         }
 
@@ -226,6 +234,7 @@ public class GpuPodServiceImpl implements GpuPodService {
     @Override
     public void startInstance(String id) {
         String tenantId = getTenantId();
+        ensureGpuSource(gpuPodApiClient.getInstance(id, tenantId));
         gpuPodApiClient.startInstance(id, tenantId);
 
         // 更新本地状态
@@ -235,6 +244,7 @@ public class GpuPodServiceImpl implements GpuPodService {
     @Override
     public void stopInstance(String id) {
         String tenantId = getTenantId();
+        ensureGpuSource(gpuPodApiClient.getInstance(id, tenantId));
         gpuPodApiClient.stopInstance(id, tenantId);
 
         // 更新本地状态
@@ -244,6 +254,7 @@ public class GpuPodServiceImpl implements GpuPodService {
     @Override
     public void restartInstance(String id) {
         String tenantId = getTenantId();
+        ensureGpuSource(gpuPodApiClient.getInstance(id, tenantId));
         gpuPodApiClient.restartInstance(id, tenantId);
 
         // 更新本地状态
@@ -254,6 +265,7 @@ public class GpuPodServiceImpl implements GpuPodService {
     @Transactional(rollbackFor = Exception.class)
     public void releaseInstance(String id) {
         String tenantId = getTenantId();
+        ensureGpuSource(gpuPodApiClient.getInstance(id, tenantId));
         gpuPodApiClient.releaseInstance(id, tenantId);
 
         // 本地逻辑删除
@@ -317,22 +329,36 @@ public class GpuPodServiceImpl implements GpuPodService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void setInstanceName(String id, SetNameDTO dto) {
+        String tenantId = getTenantId();
+        // 外部调度器是 GPU 实例的权威数据源，先确认实例存在且属于当前租户。
+        ensureGpuSource(gpuPodApiClient.getInstance(id, tenantId));
+
         SetInstanceNameRequest request = new SetInstanceNameRequest();
         request.setName(dto.getName());
-        gpuPodApiClient.setInstanceNameExternal(id, getTenantId(), request);
+        gpuPodApiClient.setInstanceNameExternal(id, tenantId, request);
 
-        // 更新本地数据库
-        LambdaQueryWrapper<SysCustomerGpuPodEntity> wrapper = Wrappers.lambdaQuery();
-        wrapper.eq(SysCustomerGpuPodEntity::getInstanceId, id)
-                .eq(SysCustomerGpuPodEntity::getCustomerId, getCustomerId());
-        SysCustomerGpuPodEntity entity = sysCustomerGpuPodMapper.selectOne(wrapper);
-        if (entity == null) {
-            throw new RuntimeException("实例不存在");
+        // 本地表只是可选副本，正常购买流程不一定会写入该表；同步失败不能覆盖
+        // 已经成功的外部改名结果。
+        syncLocalInstanceName(id, dto.getName());
+    }
+
+    private void syncLocalInstanceName(String instanceId, String instanceName) {
+        try {
+            Long customerId = getCustomerId();
+            LambdaQueryWrapper<SysCustomerGpuPodEntity> wrapper = Wrappers.lambdaQuery();
+            wrapper.eq(SysCustomerGpuPodEntity::getInstanceId, instanceId)
+                    .eq(SysCustomerGpuPodEntity::getCustomerId, customerId);
+            SysCustomerGpuPodEntity entity = sysCustomerGpuPodMapper.selectOne(wrapper);
+            if (entity == null) {
+                log.warn("GPU Pod实例 {} 在本地表中不存在，跳过名称同步", instanceId);
+                return;
+            }
+            entity.setInstanceName(instanceName);
+            sysCustomerGpuPodMapper.updateById(entity);
+        } catch (Exception e) {
+            log.error("GPU Pod实例 {} 改名成功，但本地名称同步失败", instanceId, e);
         }
-        entity.setInstanceName(dto.getName());
-        sysCustomerGpuPodMapper.updateById(entity);
     }
 
     @Override
@@ -464,6 +490,8 @@ public class GpuPodServiceImpl implements GpuPodService {
         vo.setRegion(response.getRegion());
         vo.setZone(response.getZone());
         vo.setStatus(response.getStatus());
+        vo.setOrigin(response.getOrigin() == null || response.getOrigin().isBlank() ? "gpu_pod" : response.getOrigin());
+        vo.setStatusMessage(response.getStatusMessage());
         vo.setMemory(response.getMemory());
         vo.setImageUrl(response.getImage());
         vo.setBillingType(response.getBillingMode());
@@ -567,6 +595,8 @@ public class GpuPodServiceImpl implements GpuPodService {
         vo.setId(item.getInstanceId());
         vo.setName(item.getInstanceName());
         vo.setStatus(item.getStatus());
+        vo.setOrigin(item.getOrigin() == null || item.getOrigin().isBlank() ? "gpu_pod" : item.getOrigin());
+        vo.setStatusMessage(item.getStatusMessage() != null ? item.getStatusMessage() : item.getMessage());
         vo.setRegion(item.getRegion());
         vo.setZone(item.getZone());
         vo.setBillingType(item.getBillingMode());
@@ -642,6 +672,21 @@ public class GpuPodServiceImpl implements GpuPodService {
         }
 
         return vo;
+    }
+
+    private boolean isGpuSource(String origin, Integer gpuCount, String gpuSpec) {
+        if ("cpu_instance".equalsIgnoreCase(origin)) return false;
+        return "gpu_pod".equalsIgnoreCase(origin) || "cluster".equalsIgnoreCase(origin)
+                || (origin == null || origin.isBlank()) && ((gpuCount != null && gpuCount > 0) || (gpuSpec != null && !gpuSpec.isBlank()));
+    }
+
+    private void ensureGpuSource(String origin, Integer gpuCount, String gpuSpec) {
+        if (!isGpuSource(origin, gpuCount, gpuSpec)) throw new RuntimeException("实例来源不匹配，请刷新列表后重试");
+    }
+
+    private void ensureGpuSource(InstanceResponse response) {
+        if (response == null || !response.isSuccess()) throw new RuntimeException("实例不存在或状态已变化，请刷新列表后重试");
+        ensureGpuSource(response.getOrigin(), response.getGpuSpec() == null ? null : response.getGpuSpec().getCount(), response.getGpuSpec() == null ? null : response.getGpuSpec().getModel());
     }
 
     /**

@@ -61,6 +61,10 @@ export interface CalculateFeeParams {
   duration?: number
   expandSize?: number
   couponId?: string
+  region?: string
+  publicIpEnabled?: boolean
+  bandwidthChargeType?: 'PayByTraffic' | 'PayByBandwidth'
+  bandwidthMbps?: number
 }
 
 /** 费用计算结果 */
@@ -75,6 +79,7 @@ export interface FeeResult {
   discount: number
   total: number
   diskFee?: number
+  eipPricing?: Record<string, any>
   couponInfo?: {
     id: string
     name: string
@@ -117,6 +122,9 @@ export interface PodCreateRequest {
   machineId: string
   gpuDriver: string
   cudaVersion: string
+  publicIpEnabled?: boolean
+  bandwidthChargeType?: 'PayByTraffic' | 'PayByBandwidth'
+  bandwidthMbps?: number
 }
 
 /** Pod创建阶段状态 */
@@ -278,6 +286,17 @@ export function calculateRentFee(data: CalculateFeeParams): Promise<ApiResponse<
     url: '/pc/gpu/rent/calculate',
     method: 'post',
     data
+  })
+}
+
+/** 查询公开公网 IP 价目。 */
+export function getEipPrices(region: string, billingType: 'traffic' | 'bandwidth', bandwidth: number) {
+  return request({
+    url: '/pc/gpu/rent/eip-prices',
+    method: 'get',
+    params: { region, billingType, bandwidth },
+    noLoading: true,
+    suppressErrorMessage: true
   })
 }
 

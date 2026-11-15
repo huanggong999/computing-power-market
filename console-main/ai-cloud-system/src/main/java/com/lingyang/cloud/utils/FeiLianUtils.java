@@ -38,11 +38,15 @@ public class FeiLianUtils {
      * 测试
      */
 //    public static final String URL = "https://lab.agi-c.eyunai.net:8443";
+//    public static final String ACCESS_KEY_ID = "nfUfcIdRtdtUljrueDuA";
+//    public static final String ACCESS_KEY_SECRET = "KPyRfkzFFmhMRCYxGNrjSFIcZJjDiCypcOWTkrih";
 
     /**
      * 正式
      */
 //    public static final String URL = "https://agi-c.eyunai.net:8443";
+//    public static final String ACCESS_KEY_ID = "gLnfCQrTdpIXzSpADkHw";
+//    public static final String ACCESS_KEY_SECRET = "fdHVfepOrtslHIHxHeZnQlQbbQhpFNXIcglyiGGl";
 
     @Value("${feiLian.url}")
     private String URL;

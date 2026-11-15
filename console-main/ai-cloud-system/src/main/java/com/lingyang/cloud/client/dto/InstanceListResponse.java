@@ -51,6 +51,9 @@ public class InstanceListResponse {
         private String region;
         private String zone;
         private String status;
+        private String statusMessage;
+        private String message;
+        private String origin;
         /**
          * GPU 规格描述,例如 "L4 * 1卡"
          */

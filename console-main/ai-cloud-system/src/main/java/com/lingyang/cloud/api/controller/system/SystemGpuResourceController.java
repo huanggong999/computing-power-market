@@ -68,6 +68,9 @@ public class SystemGpuResourceController {
     @Resource
     private VolcanoGpuSalePriceService volcanoGpuSalePriceService;
 
+    @Resource
+    private VolcanoCpuSalePriceService volcanoCpuSalePriceService;
+
     // ==================== GPU资源管理 ====================
 
     @GetMapping("/resource/page")
@@ -329,6 +332,47 @@ public class SystemGpuResourceController {
         gpuZoneService.deleteById(id);
         return Result.success();
     }
+
+    @GetMapping("/volcano/cpu/catalog")
+    @Operation(summary = "火山云 CPU 价格目录快照")
+    @Log(value = "火山云CPU价格目录快照", businessType = BusinessType.GET)
+    public Result<JSONObject> volcanoCpuCatalog() { return Result.success(volcanoCpuSalePriceService.getStoredCatalog()); }
+
+    @PostMapping("/volcano/cpu/catalog/refresh")
+    @Operation(summary = "刷新全部火山云 CPU 价格")
+    @Log(value = "刷新火山云CPU价格", businessType = BusinessType.UPDATE)
+    public Result<JSONObject> refreshVolcanoCpuCatalog() { return Result.success(volcanoCpuSalePriceService.refreshCatalog()); }
+
+    @GetMapping("/volcano/cpu/price/page")
+    @Operation(summary = "火山云CPU售价分页列表")
+    @Log(value = "火山云CPU售价列表", businessType = BusinessType.GET)
+    public Result<PageResult<VolcanoCpuSalePriceVO>> volcanoCpuPricePage(
+            @RequestParam(required = false) String regionCode,
+            @RequestParam(required = false) String instanceTypeId,
+            @RequestParam(required = false) String billingType,
+            @RequestParam(required = false) Integer status, PageQuery pageQuery) {
+        return Result.success(volcanoCpuSalePriceService.getPricePage(pageQuery, regionCode, instanceTypeId, billingType, status));
+    }
+
+    @GetMapping("/volcano/cpu/price/{id}")
+    @Operation(summary = "火山云CPU售价详情")
+    @Log(value = "火山云CPU售价详情", businessType = BusinessType.GET)
+    public Result<VolcanoCpuSalePriceVO> volcanoCpuPriceDetail(@PathVariable Long id) { return Result.success(volcanoCpuSalePriceService.getById(id)); }
+
+    @PostMapping("/volcano/cpu/price/save")
+    @Operation(summary = "保存火山云CPU售价")
+    @Log(value = "保存火山云CPU售价", businessType = BusinessType.UPDATE)
+    public Result<Void> volcanoCpuPriceSave(@RequestBody @Valid VolcanoCpuSalePriceEdit edit) { volcanoCpuSalePriceService.saveOrUpdate(edit); return Result.success(); }
+
+    @GetMapping("/volcano/cpu/price/status")
+    @Operation(summary = "修改火山云CPU售价状态")
+    @Log(value = "修改火山云CPU售价状态", businessType = BusinessType.UPDATE)
+    public Result<Void> volcanoCpuPriceStatus(@RequestParam Long id, @RequestParam Integer status) { volcanoCpuSalePriceService.updateStatus(id, status); return Result.success(); }
+
+    @DeleteMapping("/volcano/cpu/price/{id}")
+    @Operation(summary = "恢复火山云CPU默认价")
+    @Log(value = "恢复火山云CPU默认价", businessType = BusinessType.DELETE)
+    public Result<Void> volcanoCpuPriceDelete(@PathVariable Long id) { volcanoCpuSalePriceService.restoreDefaultPrice(id); return Result.success(); }
 
     // ==================== GPU集群管理 ====================
 

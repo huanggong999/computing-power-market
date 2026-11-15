@@ -517,7 +517,7 @@ public class SysOrderServiceImpl implements SysOrderService {
             case RENEW_RESOURCE -> createRenewResourceOrder(createDTO.getOrderNo());
             // 网络产品购买订单
             case PRODUCT -> createProductOrder(createDTO);
-            case RENEW_PRODUCT, UPGRADE_PRODUCT -> null;
+            case RENEW_PRODUCT, UPGRADE_PRODUCT, RESOURCE_RESIZE -> null;
         };
         if (ObjectUtils.isEmpty(orderSourceList)) {
             throw new HttpServiceException("订单资源列表为空");

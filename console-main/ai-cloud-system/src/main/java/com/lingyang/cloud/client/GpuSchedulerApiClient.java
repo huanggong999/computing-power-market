@@ -236,6 +236,30 @@ public class GpuSchedulerApiClient {
         return null;
     }
 
+    /** 查询火山云公开 EIP 价目，不需要租户鉴权。 */
+    public JSONObject getEipPrices(String region, String billingType, Integer bandwidth) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(baseUrl + "/api/v1/cpu/eip-prices")
+                .queryParam("region", region);
+        if (StringUtils.isNotBlank(billingType)) builder.queryParam("billing_type", billingType);
+        if (bandwidth != null) builder.queryParam("bandwidth", bandwidth);
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    builder.build(true).toUri(), HttpMethod.GET, new HttpEntity<>(new HttpHeaders()), String.class);
+            JSONObject result = JSON.parseObject(response.getBody());
+            return result == null ? new JSONObject() : result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch public EIP prices for region={}, billingType={}, bandwidth={}", region, billingType, bandwidth, e);
+            JSONObject failed = new JSONObject();
+            failed.put("success", false);
+            failed.put("available", false);
+            failed.put("region", region);
+            failed.put("billingType", billingType);
+            failed.put("bandwidthMbps", bandwidth);
+            failed.put("message", "公网 IP 价格暂时不可用");
+            return failed;
+        }
+    }
+
     /** 外部接口为公开接口，不附加管理端鉴权参数。 */
     private JSONObject fetchPublicGpuData(String path) {
         String url = baseUrl + path;

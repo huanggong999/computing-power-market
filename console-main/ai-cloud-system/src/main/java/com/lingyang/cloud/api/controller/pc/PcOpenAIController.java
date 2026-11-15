@@ -21,6 +21,7 @@ import com.lingyang.cloud.service.SysConfigService;
 import com.lingyang.cloud.service.SysCustomerCreditLineService;
 import com.lingyang.cloud.service.SysCustomerService;
 import com.lingyang.cloud.service.SysCustomerVoucherService;
+import com.lingyang.cloud.utils.CustomerVolumeMapUtils;
 import com.lingyang.cloud.voengine.client.VoEngineApiClient;
 import com.lingyang.cloud.voengine.config.VolEngineConfig;
 import com.lingyang.common.cache.CacheQueueService;
@@ -165,9 +166,8 @@ public class PcOpenAIController {
 
         // 查询本地云盘资源
         EcsSystemVolumeConfigModel sysVolumeConfig = sysConfigService.getConfig(SystemConfigEnum.ECS_SYSTEM_VOLUME).getConfigValue().to(EcsSystemVolumeConfigModel.class);
-        Map<String, SysCustomerVolumeEntity> localCustomerVolumeIdMap = sysCustomerVolumeMapper.selectList(Wrappers.lambdaQuery(SysCustomerVolumeEntity.class))
-                .stream().filter(d -> StringUtils.isNotEmpty(d.getVolumeId()))
-                .collect(Collectors.toMap(SysCustomerVolumeEntity::getVolumeId, d -> d));
+        Map<String, SysCustomerVolumeEntity> localCustomerVolumeIdMap = CustomerVolumeMapUtils.indexByVolumeId(
+                sysCustomerVolumeMapper.selectList(Wrappers.lambdaQuery(SysCustomerVolumeEntity.class)));
 
         instanceNoBillEntitList.forEach(entity -> {
             switch (entity.getSourceType()) {

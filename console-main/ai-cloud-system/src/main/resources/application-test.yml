@@ -10,7 +10,7 @@ spring:
   datasource:
     url: jdbc:mysql://mysql73cfcbbc127c.rds.ivolces.com:3306/ai_cloud_test?useUnicode=true&characterEncoding=utf8
     username: ai_cloud_test
-    password: ${TEST_DB_PASSWORD:}
+    password: 4R8XBnsFt876xAd4
     driverClassName: com.mysql.cj.jdbc.Driver
     type: com.zaxxer.hikari.HikariDataSource
     hikari:
@@ -28,9 +28,9 @@ spring:
   #      max-wait: 60000
   data:
     redis:
-    host: 127.0.0.1
-    port: 6379
-      password: ${TEST_REDIS_PASSWORD:}
+      host: 127.0.0.1
+      port: 6379
+      password:
       timeout: 3000ms
       database: 0
       lettuce:
@@ -118,8 +118,8 @@ logging:
     com.lingyang.system: debug
 
 vol-engine:
-  access-key: ${VOLC_ACCESS_KEY:}
-  access-secret: ${VOLC_ACCESS_SECRET:}
+  access-key: AKLTNThhMGRlNjdhMzlkNDJkY2E0YmM0MzdiMWY5MzZmZTU
+  access-secret: WTJSalltVmpNek5oTTJGbU5Ea3hZV0V4WWpaa1kyTmtOell3T0RKaFpUUQ==
   regions: cn-beijing
   project-name: ai_cloud_system
   tos:
@@ -142,7 +142,7 @@ alipay:
   server_url: https://openapi.alipay.com/gateway.do
   app_id: 2021005101676006
   alipay_public_key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlP+vciQYi/d3IMU1ZzEfyBeNfIKLjVkmxWlRqMft+u1UpzdZoUxTsBFsHnVeKErOz5NqwsngsDQNNwxCoHexVM6EZs1KH+zbENXZTqydOeviO4F/KzWuzxVfMFbKPDXt0ddkXMQdgtrUJKKbRcyLRZuoIuHv2CsEaxVptaRa6jWb8VPOneG8fEasoBM1qiv6PjzIVUBeL51SzcmAkzXTXncm67BNQISZ7Tvx94uR66Ukuc7bXQQBkrAaaIGaXHmH0a3XSvOS0DzeSVUCX2Pj8S3FdRthBHvGsNE3aHknMmW8H5RM1pQklRQqg26AIEZ35LFYjSb7hvOC7tCtiB1A0wIDAQAB
-  private_key: ${ALIPAY_PRIVATE_KEY:}
+  private_key: MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDWsOkY89yrAsJR6nrTeNlc3mTM/Zh0o6jmvGtpr4/8fPO2Z+JzvAo3vuynL/e8/ISD+yOwkCGvWcETwljPnwvZFJuwuKxyDrz+leiBQdKe1a5YVoK0ubGKQfLIGlI97HbMRaZVAUgxb/TrHlAg7kvk88S4DBOjttbHiIvRx482f4/Y+ElxfnYAKQjwXVZSNBN9arozK0kBK5gmVdwfseXcGk2bLIDkEtmfqzCtS1xNKEW3xpub9Erpj/1fp1LIBRJXII9pqQ0Qj4rGid/+TH7WHRnl4KcagdZW0kElDPjtyUj8k9cYQTaMtt/sucMfdzwyl6k9G/a6In9lkoJVigNNAgMBAAECggEAKM69r9GCizreBsYEDLg20LExBcnaNal6DEmaPR9yxfJWPMCoSYlfg9MVln3GoDR7V77fvMrYrETqL0BMs0Iu9Vc2dLPVi2SDxfxmklMZnrlNB1uCQqndNkNsy149banJtvAyOowg1czLB/neDzRcVquDI9yfywmQ76JjuT8uWJQzS+e1gzFjpu0C3vQlIfJ6EBqTHU5Iy2JI1CKQ2vvSQKPwNcNwBhOU0ONfepDMpxOdFw7g7A72SQjHgs65m1JSBds2QwQXJz5FROZzy+YV2BiOLRqy2fyS+qfd967OqaT5ZtV6FghRWzJ2E3Z1ORO/50IkxmKp7mSztw+7yKgcYQKBgQD5+ncLDy9wF/GzErB378hI4Q/ivqpi8bYtTVFk4vTFc8WvuKiEnkJAXlnJPmmCWabIPUAFOwWAk9rHFflURGo7zhzOx/89j8C2D6lGlGhfEgobyf+zKCWN4mHPVooCFvwQptWK1g9WqWKD3ygRGVm2rDbq7tT9By+8hfFwHW6auQKBgQDb3NcTSo3ZiBuDkkZB3lRH/8lb2FnkMnRydqIW/LBcGQrCt8G+oXAdh8MKtax0yF1MBRRDqdQWhCvxWUXVsw7Rrn6KWjjMfvMc58sxEg9TsZyIZsngGeltB8U0D6QwBbnxS41924Pnqof6MTFr/yYxwpcpMxmnk8fJmTaZ6EpTNQKBgEFtRbUWT2M2USN+c8OgdbpldaPyJWRqQTVQNEqEgG4hpA8e9LRpO4vfZf6fIDxmvJlSNqxny0Pg7vUGklB0650lkDKq8+on8tdz9+kqNLsVXKHzV8KLcnDVXKZIzyxG2ch98gw5hKA5CzjasoDvMqT2JBWPVx22wM7F+/BNM8K5AoGBAJ6asDiFZtDPA/IlGjO4HBqYZfywlSAuWZydAg8NGHhHxGB1SPmo4gUbg9L8/bx9Mfh+DYFGSO45SK3hlaQ0eHNAqp5JuYGj7uMiP41VluLsVJx9chIM/zwdB+Cni+zspJdxxk9NhNkhRthwllNvC3GIC5239EDUNaKzuRTL4polAoGAKnLGzq5BhzXyjv8JtKflr/NlWjQtL42794JhqZJd3Er/9ZKxEnsrNJSq+1HtdgSSByc+ti+mKmEyiE1E4cxNtkEOQSVbbQcU4mAlZ/WTXxwQ8TVp33jEnm3j/SHWKMqfUMMiIgEE76n2YKp1i6aBwy+Y/7n9+7hqu6kJaRQH5Sc=
   format: json
   charset: utf-8
   sign_type: RSA2
@@ -154,7 +154,7 @@ alipay:
 applet:
   weixin:
     appId: 'wx4a9bd7a194d518e5'
-    appKey: ${WECHAT_APP_KEY:}
+    appKey: '6fe3b85542ff2c8407bf9f3157100489'
     #临时目录
     tempImage: /www/wwwroot/temp/
     # 小程序环境（develop 开发版环境，trial 体验版环境，release 正式版环境）
@@ -165,10 +165,10 @@ applet:
 tencent:
   pay:
     app-id: wxc8c179d3565261ea
-    apiV2Key: ${TENCENT_PAY_API_V2_KEY:}
-    apiV3Key: ${TENCENT_PAY_API_V3_KEY:}
+    apiV2Key: D1F0A0A1C7A6C4I0A4A2A5A1C0H2E3F0
+    apiV3Key: ZX13995528800zxtour13995528800zx
     mch_id: 1696103398
-    merchant_serial_number: ${TENCENT_PAY_MERCHANT_SERIAL_NUMBER:}
+    merchant_serial_number: 629442745E75D815A83B3266781F312B876CB25C
     pay_notify_url: https://eyunai.net/api/apiCallback/onlinePayCallback/wechatPayNotify
     #      refunds_notify_url: https://lxxd.tourzx.cn/api/apiCallback/wechat/refundsNotify
     privateCertPath: classPath:cert/apiclient_key.pem
@@ -181,6 +181,6 @@ contract:
 
 feiLian:
   url: https://lab.agi-c.eyunai.net:8443
-  appId: ${FEILIAN_APP_ID:}
-  secret: ${FEILIAN_SECRET:}
+  appId: nfUfcIdRtdtUljrueDuA
+  secret: KPyRfkzFFmhMRCYxGNrjSFIcZJjDiCypcOWTkrih
   parentDepartmentId: od_qNnYzn1Qe8L1

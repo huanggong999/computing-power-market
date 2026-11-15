@@ -41,3 +41,14 @@ export const volcanoPriceStatusApi = (id: number, status: number): Res<any> =>
 
 export const volcanoPriceDeleteApi = (id: number): Res<any> =>
   request.delete(`/system/gpu/volcano/price/${id}`);
+
+export interface VolcanoCpuSalePriceEditParams {
+  id?: number; regionCode: string; instanceTypeId: string; family?: string; cpuCores?: number; cpuModel?: string; memGib?: number;
+  billingType: "on_demand" | "monthly"; upstreamPrice?: number | null; salePrice: number; status?: number; remark?: string; priceVersion?: string
+}
+export const volcanoCpuCatalogApi = (): Res<any> => request.get("/system/gpu/volcano/cpu/catalog")
+export const refreshVolcanoCpuCatalogApi = (): Res<any> => request.post("/system/gpu/volcano/cpu/catalog/refresh", undefined, { timeout: 600000, noLoading: true } as any)
+export const volcanoCpuPricePageApi = (params?: Record<string, unknown>): Res<any> => request.get("/system/gpu/volcano/cpu/price/page", { params })
+export const volcanoCpuPriceSaveApi = (data: VolcanoCpuSalePriceEditParams): Res<any> => request.post("/system/gpu/volcano/cpu/price/save", data)
+export const volcanoCpuPriceStatusApi = (id: number, status: number): Res<any> => request.get("/system/gpu/volcano/cpu/price/status", { params: { id, status } })
+export const volcanoCpuPriceDeleteApi = (id: number): Res<any> => request.delete(`/system/gpu/volcano/cpu/price/${id}`)

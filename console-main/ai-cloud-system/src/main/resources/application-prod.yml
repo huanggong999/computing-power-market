@@ -11,7 +11,7 @@ spring:
 #    url: jdbc:mysql://mysql-73cfcbbc127c-public.rds.volces.com:33060/ai_cloud?useUnicode=true&characterEncoding=utf8
     url: jdbc:mysql://mysql73cfcbbc127c.rds.ivolces.com:3306/ai_cloud?useUnicode=true&characterEncoding=utf8
     username: ai_cloud
-    password: ${PROD_DB_PASSWORD:}
+    password: CJBWHZrxJTwap8cG
     driverClassName: com.mysql.cj.jdbc.Driver
     type: com.zaxxer.hikari.HikariDataSource
     hikari:
@@ -27,7 +27,7 @@ spring:
     redis:
       host: 127.0.0.1
       port: 6379
-      password: ${PROD_REDIS_PASSWORD:}
+      password: sdjxh@3dw
       timeout: 3000ms
       database: 1
       lettuce:
@@ -117,8 +117,8 @@ logging:
     com.lingyang.system: debug
 
 vol-engine:
-  access-key: ${VOLC_ACCESS_KEY:}
-  access-secret: ${VOLC_ACCESS_SECRET:}
+  access-key: AKLTNThhMGRlNjdhMzlkNDJkY2E0YmM0MzdiMWY5MzZmZTU
+  access-secret: WTJSalltVmpNek5oTTJGbU5Ea3hZV0V4WWpaa1kyTmtOell3T0RKaFpUUQ==
   regions: cn-beijing
   project-name: ai-cloud-system-prod
   tos:
@@ -141,7 +141,7 @@ cache:
 #  server_url: https://openapi.alipay.com/gateway.do
 #  app_id: 2021005101676006
 #  alipay_public_key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlP+vciQYi/d3IMU1ZzEfyBeNfIKLjVkmxWlRqMft+u1UpzdZoUxTsBFsHnVeKErOz5NqwsngsDQNNwxCoHexVM6EZs1KH+zbENXZTqydOeviO4F/KzWuzxVfMFbKPDXt0ddkXMQdgtrUJKKbRcyLRZuoIuHv2CsEaxVptaRa6jWb8VPOneG8fEasoBM1qiv6PjzIVUBeL51SzcmAkzXTXncm67BNQISZ7Tvx94uR66Ukuc7bXQQBkrAaaIGaXHmH0a3XSvOS0DzeSVUCX2Pj8S3FdRthBHvGsNE3aHknMmW8H5RM1pQklRQqg26AIEZ35LFYjSb7hvOC7tCtiB1A0wIDAQAB
-  private_key: ${ALIPAY_PRIVATE_KEY:}
+#  private_key: MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDWsOkY89yrAsJR6nrTeNlc3mTM/Zh0o6jmvGtpr4/8fPO2Z+JzvAo3vuynL/e8/ISD+yOwkCGvWcETwljPnwvZFJuwuKxyDrz+leiBQdKe1a5YVoK0ubGKQfLIGlI97HbMRaZVAUgxb/TrHlAg7kvk88S4DBOjttbHiIvRx482f4/Y+ElxfnYAKQjwXVZSNBN9arozK0kBK5gmVdwfseXcGk2bLIDkEtmfqzCtS1xNKEW3xpub9Erpj/1fp1LIBRJXII9pqQ0Qj4rGid/+TH7WHRnl4KcagdZW0kElDPjtyUj8k9cYQTaMtt/sucMfdzwyl6k9G/a6In9lkoJVigNNAgMBAAECggEAKM69r9GCizreBsYEDLg20LExBcnaNal6DEmaPR9yxfJWPMCoSYlfg9MVln3GoDR7V77fvMrYrETqL0BMs0Iu9Vc2dLPVi2SDxfxmklMZnrlNB1uCQqndNkNsy149banJtvAyOowg1czLB/neDzRcVquDI9yfywmQ76JjuT8uWJQzS+e1gzFjpu0C3vQlIfJ6EBqTHU5Iy2JI1CKQ2vvSQKPwNcNwBhOU0ONfepDMpxOdFw7g7A72SQjHgs65m1JSBds2QwQXJz5FROZzy+YV2BiOLRqy2fyS+qfd967OqaT5ZtV6FghRWzJ2E3Z1ORO/50IkxmKp7mSztw+7yKgcYQKBgQD5+ncLDy9wF/GzErB378hI4Q/ivqpi8bYtTVFk4vTFc8WvuKiEnkJAXlnJPmmCWabIPUAFOwWAk9rHFflURGo7zhzOx/89j8C2D6lGlGhfEgobyf+zKCWN4mHPVooCFvwQptWK1g9WqWKD3ygRGVm2rDbq7tT9By+8hfFwHW6auQKBgQDb3NcTSo3ZiBuDkkZB3lRH/8lb2FnkMnRydqIW/LBcGQrCt8G+oXAdh8MKtax0yF1MBRRDqdQWhCvxWUXVsw7Rrn6KWjjMfvMc58sxEg9TsZyIZsngGeltB8U0D6QwBbnxS41924Pnqof6MTFr/yYxwpcpMxmnk8fJmTaZ6EpTNQKBgEFtRbUWT2M2USN+c8OgdbpldaPyJWRqQTVQNEqEgG4hpA8e9LRpO4vfZf6fIDxmvJlSNqxny0Pg7vUGklB0650lkDKq8+on8tdz9+kqNLsVXKHzV8KLcnDVXKZIzyxG2ch98gw5hKA5CzjasoDvMqT2JBWPVx22wM7F+/BNM8K5AoGBAJ6asDiFZtDPA/IlGjO4HBqYZfywlSAuWZydAg8NGHhHxGB1SPmo4gUbg9L8/bx9Mfh+DYFGSO45SK3hlaQ0eHNAqp5JuYGj7uMiP41VluLsVJx9chIM/zwdB+Cni+zspJdxxk9NhNkhRthwllNvC3GIC5239EDUNaKzuRTL4polAoGAKnLGzq5BhzXyjv8JtKflr/NlWjQtL42794JhqZJd3Er/9ZKxEnsrNJSq+1HtdgSSByc+ti+mKmEyiE1E4cxNtkEOQSVbbQcU4mAlZ/WTXxwQ8TVp33jEnm3j/SHWKMqfUMMiIgEE76n2YKp1i6aBwy+Y/7n9+7hqu6kJaRQH5Sc=
 #  format: json
 #  charset: utf-8
 #  sign_type: RSA2
@@ -154,7 +154,7 @@ alipay:
   server_url: https://openapi.alipay.com/gateway.do
   app_id: 2021005118699843
   alipay_public_key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyuNhNEZtMNIIpmXl9izzmXQVYoemX1PSPZicXnCrRNYzExcc9jcr+g1I0547q4/oMmXpt12tiC2z6VdNekSzrb7+JizyKoE4M9LQnE8HfeuBDUdwx8xGIykoIAgFyMJjt/xpG5ID4QPr9SVt5LdP8RNhHs2lnBudOWqlSuv9CH8LbRGChFYNN96TB/iZB8grepOHMgyvzwG5lCpBxyzgna6mHPNRHz+osi1r/kZXL1qiDkdUEVQb59RT2Cj50e3mBwYQwOKaFY93h6o6srbCm+0Cvz46oU8zc1nJK9Me0gC9/TMvBikgksDYYc4PUilqr77FifCYluh/f1viHKZ2wQIDAQAB
-  private_key: ${ALIPAY_PRIVATE_KEY:}
+  private_key: MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCbzPm0i81ShiI+yvEaub2SMu0g3/TgPHVrVZErFY7fxzlnjDMo+K0rXy0btDrEg1dHBp78XRIlqd/Gg6GSfXlx6ITv2JxqN7DHkuNbw8nzxL2NTaK1CfC/9TLAi7PGpWwz0FrpeXdueUha13/5q2SerM86P9YPijUcXoE7F0YsQ382GP1BRq4xkV3ZtcQOP08xo8KoUUU8NPNJt/MNtsJKA+sxVx5SZLKcXBoB7EeOpUo+TSKTuuby7L3Sg+j9T2AvKipihxtEIf5pK83DoT94S9Kevq0BrkzFwAf66P1WMI+jLCr0kCfBXEEk76WYh8MMJatcQ0X3XqC5h0QSmzTfAgMBAAECggEAFli4GCVVNdj3YHpLSsIJZsbXLDfzL5Z8YQDM6ZkV/RLeMPPzApVogSgNmEOpijYsdouEkj3nNG/BIQAQVKqamLP5HU28YZ/LQ1TWN3tFpCk75uCTzdO3LFFHDkb7aiqf8m6YG5TIhJfwwNbYDD+BFyFCN+CgG2p/Y6pKbudPsVliNHWkFBknzNXp07Y5E2rNWjA2bMPdZl2vE+lJisDnldZJTFkE2i/TqGAfHb+JpGA2z3v/WLeVQqs1v4Zuhl2mE+FqtC8yolqgXZWnssrxXH5zqaGSUi8Go99BhvoEsehPqorFDrf67xIuZpTO6BVisjr5I0DcFJ4jGtC0VOEIAQKBgQD8CJ0K7HtvNF5sKmQvFFAIKcc6hLNwYXfj4zTUY6DGdxiRPrs7fyYTzdQujCzS0N3IQi+2nrgCklUEcQ3KYLa6lTPY+VeBjiSOyaBbJWfxfhM0USMqdJr82xxh1QAxU/G3dscClYrWlUBE7aJ8G9PTr3T5+VNaX13UebKxS6akgQKBgQCeQKk/2K6ZPi/uJ5U1uK9rf1JiT8hB8p7YdAKk+0ket75GfD27hVY1kaRBy6BRHx4iWNohiMIFbr3XJ5yEqcXX42YgBOmyEgG4K0E6LUtGXgMEe6dio7KN7mZ/ajmHDd/PKbbe6Fxrx1AgJOmprkLIl1yAoaFJWPpE7Leem6upXwKBgDaCLmTUbIXKj7lZGb3M6No7HumbFavyiJly5FQjD/yceWXAaYIep7+UvpUqn+8gWTcciXE3tphnyZdiVBc2/44vAr2kf7Z3ZZS0KshLuMVT/RdNjQt7mKGjSeomxRnmC9sgBz6Z1SM/uFywAHpTEmcwBV6i+9IJ2iNABtOthucBAoGALVnAZvCUkIvWtnwXcW68rqStGklczTFXPhZ4z4jHmorzd0WRd1StsOpM1SIijjzJqPQnhqanW2Ex/B945je037pmANUHl6U7YujaZ26lfMPiP32kKUtaFvxz2R264K4kLjz5EAYsviI/HwcVAzBSKSPfOWmYS+m4xtnDgSuBVScCgYBJtcsMPFg9aZanSf9rxN3NzBrae0rZxVhkxQd2DNAug7GetpeGQbUayQkhl8X5Cq1E6J2D5fZMV2nAcj/Vl9kRTZ7NZiao4PlrFHm63ay4S3KcNXpgZtleZvc5ItzAfQo6Jf4MGI6g706trhmx0UuBv99XJvZedssFrfb486pgZg==
   format: json
   charset: utf-8
   sign_type: RSA2
@@ -165,7 +165,7 @@ alipay:
 applet:
   weixin:
     appId: 'wx4a9bd7a194d518e5'
-    appKey: ${WECHAT_APP_KEY:}
+    appKey: '6fe3b85542ff2c8407bf9f3157100489'
     #临时目录
     tempImage: /www/wwwroot/temp/
     # 小程序环境（develop 开发版环境，trial 体验版环境，release 正式版环境）
@@ -177,10 +177,10 @@ applet:
 tencent:
   pay:
     app-id: wxc8c179d3565261ea
-    apiV2Key: ${TENCENT_PAY_API_V2_KEY:}
-    apiV3Key: ${TENCENT_PAY_API_V3_KEY:}
+    apiV2Key: D1F0A0A1C7A6C4I0A4A2A5A1C0H2E3F0
+    apiV3Key: ZX13995528800zxtour13995528800zx
     mch_id: 1696103398
-    merchant_serial_number: ${TENCENT_PAY_MERCHANT_SERIAL_NUMBER:}
+    merchant_serial_number: 629442745E75D815A83B3266781F312B876CB25C
     pay_notify_url: https://eyunai.net/api/apiCallback/onlinePayCallback/wechatPayNotify
     privateCertPath: classPath:cert/apiclient_key.pem
 
@@ -192,10 +192,11 @@ contract:
 
 feiLian:
   url: https://agi-c.eyunai.net:8443
-  appId: ${FEILIAN_APP_ID:}
-  secret: ${FEILIAN_SECRET:}
+  appId: gLnfCQrTdpIXzSpADkHw
+  secret: fdHVfepOrtslHIHxHeZnQlQbbQhpFNXIcglyiGGl
   parentDepartmentId: od_2zdykdKwGxgM
 
 # 支付宝企业账户公钥秘钥，支付宝公钥
 # 应用公钥：MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAm8z5tIvNUoYiPsrxGrm9kjLtIN/04Dx1a1WRKxWO38c5Z4wzKPitK18tG7Q6xINXRwae/F0SJanfxoOhkn15ceiE79icajewx5LjW8PJ88S9jU2itQnwv/UywIuzxqVsM9Ba6Xl3bnlIWtd/+atknqzPOj/WD4o1HF6BOxdGLEN/Nhj9QUauMZFd2bXEDj9PMaPCqFFFPDTzSbfzDbbCSgPrMVceUmSynFwaAexHjqVKPk0ik7rm8uy90oPo/U9gLyoqYocbRCH+aSvNw6E/eEvSnr6tAa5MxcAH+uj9VjCPoywq9JAnwVxBJO+lmIfDDCWrXENF916guYdEEps03wIDAQAB
 # 支付宝公钥：MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyuNhNEZtMNIIpmXl9izzmXQVYoemX1PSPZicXnCrRNYzExcc9jcr+g1I0547q4/oMmXpt12tiC2z6VdNekSzrb7+JizyKoE4M9LQnE8HfeuBDUdwx8xGIykoIAgFyMJjt/xpG5ID4QPr9SVt5LdP8RNhHs2lnBudOWqlSuv9CH8LbRGChFYNN96TB/iZB8grepOHMgyvzwG5lCpBxyzgna6mHPNRHz+osi1r/kZXL1qiDkdUEVQb59RT2Cj50e3mBwYQwOKaFY93h6o6srbCm+0Cvz46oU8zc1nJK9Me0gC9/TMvBikgksDYYc4PUilqr77FifCYluh/f1viHKZ2wQIDAQAB
+# 应用私钥：MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCbzPm0i81ShiI+yvEaub2SMu0g3/TgPHVrVZErFY7fxzlnjDMo+K0rXy0btDrEg1dHBp78XRIlqd/Gg6GSfXlx6ITv2JxqN7DHkuNbw8nzxL2NTaK1CfC/9TLAi7PGpWwz0FrpeXdueUha13/5q2SerM86P9YPijUcXoE7F0YsQ382GP1BRq4xkV3ZtcQOP08xo8KoUUU8NPNJt/MNtsJKA+sxVx5SZLKcXBoB7EeOpUo+TSKTuuby7L3Sg+j9T2AvKipihxtEIf5pK83DoT94S9Kevq0BrkzFwAf66P1WMI+jLCr0kCfBXEEk76WYh8MMJatcQ0X3XqC5h0QSmzTfAgMBAAECggEAFli4GCVVNdj3YHpLSsIJZsbXLDfzL5Z8YQDM6ZkV/RLeMPPzApVogSgNmEOpijYsdouEkj3nNG/BIQAQVKqamLP5HU28YZ/LQ1TWN3tFpCk75uCTzdO3LFFHDkb7aiqf8m6YG5TIhJfwwNbYDD+BFyFCN+CgG2p/Y6pKbudPsVliNHWkFBknzNXp07Y5E2rNWjA2bMPdZl2vE+lJisDnldZJTFkE2i/TqGAfHb+JpGA2z3v/WLeVQqs1v4Zuhl2mE+FqtC8yolqgXZWnssrxXH5zqaGSUi8Go99BhvoEsehPqorFDrf67xIuZpTO6BVisjr5I0DcFJ4jGtC0VOEIAQKBgQD8CJ0K7HtvNF5sKmQvFFAIKcc6hLNwYXfj4zTUY6DGdxiRPrs7fyYTzdQujCzS0N3IQi+2nrgCklUEcQ3KYLa6lTPY+VeBjiSOyaBbJWfxfhM0USMqdJr82xxh1QAxU/G3dscClYrWlUBE7aJ8G9PTr3T5+VNaX13UebKxS6akgQKBgQCeQKk/2K6ZPi/uJ5U1uK9rf1JiT8hB8p7YdAKk+0ket75GfD27hVY1kaRBy6BRHx4iWNohiMIFbr3XJ5yEqcXX42YgBOmyEgG4K0E6LUtGXgMEe6dio7KN7mZ/ajmHDd/PKbbe6Fxrx1AgJOmprkLIl1yAoaFJWPpE7Leem6upXwKBgDaCLmTUbIXKj7lZGb3M6No7HumbFavyiJly5FQjD/yceWXAaYIep7+UvpUqn+8gWTcciXE3tphnyZdiVBc2/44vAr2kf7Z3ZZS0KshLuMVT/RdNjQt7mKGjSeomxRnmC9sgBz6Z1SM/uFywAHpTEmcwBV6i+9IJ2iNABtOthucBAoGALVnAZvCUkIvWtnwXcW68rqStGklczTFXPhZ4z4jHmorzd0WRd1StsOpM1SIijjzJqPQnhqanW2Ex/B945je037pmANUHl6U7YujaZ26lfMPiP32kKUtaFvxz2R264K4kLjz5EAYsviI/HwcVAzBSKSPfOWmYS+m4xtnDgSuBVScCgYBJtcsMPFg9aZanSf9rxN3NzBrae0rZxVhkxQd2DNAug7GetpeGQbUayQkhl8X5Cq1E6J2D5fZMV2nAcj/Vl9kRTZ7NZiao4PlrFHm63ay4S3KcNXpgZtleZvc5ItzAfQo6Jf4MGI6g706trhmx0UuBv99XJvZedssFrfb486pgZg==

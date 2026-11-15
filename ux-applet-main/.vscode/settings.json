@@ -1,0 +1,8 @@
+{
+    "i18n-ally.localesPaths": [
+        "src/locale"
+    ],
+    "cSpell.words": [
+        "loadmore"
+    ]
+}
