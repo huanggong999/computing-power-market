@@ -1,0 +1,18 @@
+组件	                 基础镜像	                                                镜像地址
+PyTorch	        PyTorch 2.8.0 + Python 3.10 +Ubuntu 22.04 + CUDA 12.8	    acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/pytorch-2.8.0-cu12.8:python3.10
+                PyTorch 2.8.0 + Python 3.12 +Ubuntu 22.04+ CUDA 12.8	    acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/pytorch-2.8.0-cu12.8:python3.12
+
+TensorFlow	    TensorFlow 2.9.0 + Python 3.8 + Ubuntu 20.04 + CUDA 11.2	acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/tensorflow-2.9.0-cu11.2:python3.8
+
+
+Miniconda       Miniconda+ubuntu22.04+Python 3.10+cuda 12.8	                acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/miniconda-py310-cu12.8:python3.10
+                Miniconda+ubuntu22.04+Python 3.10+cuda 13.0	                acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/miniconda-py310-cu13.0:python3.10
+                Miniconda+ubuntu22.04+Python 3.12+cuda 13.0	                acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/miniconda-py312-cu13.0:python3.12
+
+tritonserver	tritonserver:25.09+ubuntu24.04+Python 3.12+cuda 13.0	    acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/tritonserver:25.09-ubuntu24-python3.12
+
+JAX 	        jax:25.04+ubuntu24.04+Python 3.12+cuda 12.9	                acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/jax:25.04-cuda12.9-python3.12
+
+paddle	        paddle:2.6.1+ubuntu20.04+Python 3.10+cuda 12.0	            acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/paddle:2.6.1-gpu-cuda12.0-cudnn8.9-trt8.6
+TensorRT	    tensorrt:23.09+ubuntu22.04+Python 3.10+cuda 12.2	        acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/tensorrt:23.09-py3
+Gromacs	        gromacs:2023.2+ubuntu22.04+Python 3.10+cuda 12.1	        acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/gromacs:2023.2

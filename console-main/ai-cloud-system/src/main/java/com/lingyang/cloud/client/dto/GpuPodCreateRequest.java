@@ -23,6 +23,12 @@ public class GpuPodCreateRequest {
     private String machineId;
     private String gpuDriver;
     private String cudaVersion;
+    /** 是否随实例购买独立公网 IP。 */
+    private Boolean publicIpEnabled;
+    /** 公网带宽计费方式：PayByTraffic 或 PayByBandwidth。 */
+    private String bandwidthChargeType;
+    /** 公网带宽上限，单位 Mbps。 */
+    private Integer bandwidthMbps;
 
     @Data
     public static class GpuSpec {

@@ -21,7 +21,7 @@
         <el-input
           v-model="form.name"
           placeholder="请输入实例名称"
-          maxlength="50"
+          maxlength="64"
           show-word-limit
         />
       </el-form-item>
@@ -69,7 +69,7 @@ const form = reactive({
 const rules: FormRules = {
   name: [
     { required: true, message: '请输入实例名称', trigger: 'blur' },
-    { min: 1, max: 50, message: '名称长度1-50个字符', trigger: 'blur' }
+    { min: 1, max: 64, message: '名称长度需为 1-64 个字符', trigger: 'blur' }
   ]
 }
 

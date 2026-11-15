@@ -1,11 +1,15 @@
 <template>
   <div class="purchase-page ignore-purchase-page">
     <div class="product-heading">
-      <div class="product-name">算力服务器 GPU</div>
+      <div class="product-name">算力服务器 {{ purchaseType === 'gpu' ? 'GPU' : 'CPU' }}</div>
       <div class="product-mode">自定义购买</div>
+      <div class="purchase-type-switch" role="group" aria-label="实例类型">
+        <button type="button" class="purchase-type" :class="{ active: purchaseType === 'gpu' }" :aria-current="purchaseType === 'gpu' ? 'page' : undefined" @click="purchaseType = 'gpu'">GPU 实例</button>
+        <button type="button" class="purchase-type" :class="{ active: purchaseType === 'cpu' }" :aria-current="purchaseType === 'cpu' ? 'page' : undefined" @click="purchaseType = 'cpu'">CPU 实例</button>
+      </div>
     </div>
 
-    <div class="purchase-shell">
+    <div v-if="purchaseType === 'gpu'" class="purchase-shell">
       <main class="config-panel">
         <section class="config-section">
           <div class="section-title">基础配置</div>
@@ -50,7 +54,7 @@
                   :class="{ active: filters.region === item.regionCode }"
                   @click="setRegion(item.regionCode)"
                 >
-                  {{ item.regionName }}
+                  {{ resolveRegionDisplayName(item.regionCode, item.regionName) }}
                 </button>
               </div>
               <div class="hint-line">
@@ -78,6 +82,32 @@
               <el-select v-model="networkType" placeholder="专有网络" disabled>
                 <el-option label="默认专有网络 / 交换机自动分配" value="vpc" />
               </el-select>
+            </div>
+          </div>
+
+          <div class="config-row">
+            <div class="row-label">
+              <strong>公网 IP</strong>
+              <span>实例是否需要公网访问</span>
+            </div>
+            <div class="row-control">
+              <el-switch v-model="publicIpEnabled" active-text="购买公网 IP" inactive-text="不购买" />
+              <div v-if="publicIpEnabled" class="public-network-options">
+                <div class="option-grid three">
+                  <button type="button" class="option-card" :class="{ active: bandwidthChargeType === 'PayByTraffic' }" @click="bandwidthChargeType = 'PayByTraffic'">
+                    <strong>按流量计费</strong><span>按实际出公网流量后付费</span>
+                  </button>
+                  <button type="button" class="option-card" :class="{ active: bandwidthChargeType === 'PayByBandwidth' }" @click="bandwidthChargeType = 'PayByBandwidth'">
+                    <strong>按带宽计费</strong><span>按所选带宽上限计费</span>
+                  </button>
+                </div>
+                <div class="public-bandwidth-control">
+                  <span>带宽上限</span>
+                  <el-input-number v-model="bandwidthMbps" :min="1" :max="200" :step="1" />
+                  <span>Mbps</span>
+                </div>
+                <div class="hint-line">公网费用将在下一步单独展示；后端费用试算和创建接口接入前，开启公网 IP 的订单暂不可提交。</div>
+              </div>
             </div>
           </div>
         </section>
@@ -271,6 +301,14 @@
             <span>优惠</span>
             <strong>- ¥ {{ formatMoney(discountAmount) }}</strong>
           </div>
+          <div v-if="publicIpEnabled" class="price-line">
+            <span>公网计费</span>
+            <strong>{{ bandwidthChargeType === 'PayByTraffic' ? '按流量' : '按带宽' }} · {{ bandwidthMbps }} Mbps</strong>
+          </div>
+          <div v-if="publicIpEnabled" class="price-line">
+            <span>公网费用</span>
+            <strong>待后端试算</strong>
+          </div>
 
           <div class="selected-spec">
             <span>已选规格</span>
@@ -296,6 +334,102 @@
       </aside>
     </div>
 
+    <div v-else class="purchase-shell cpu-purchase-shell">
+      <main class="config-panel">
+        <section class="config-section">
+          <div class="section-title">基础配置</div>
+          <div class="config-row">
+            <div class="row-label">
+              <strong>地域</strong>
+              <span>选择 CPU 云主机所在地域</span>
+            </div>
+            <div class="row-control inline-selects">
+              <el-select v-model="cpuForm.region" placeholder="请选择地域">
+                <el-option v-for="item in cpuRegions" :key="item.region" :label="item.label || item.region" :value="item.region" />
+              </el-select>
+              <el-select v-model="cpuForm.zone" placeholder="请选择可用区">
+                <el-option v-for="zone in selectedCpuZones" :key="zone" :label="cpuZoneLabel(zone)" :value="zone" />
+              </el-select>
+              <div v-if="cpuErrors.region || cpuErrors.zone" class="cpu-field-error">{{ cpuErrors.region || cpuErrors.zone }}</div>
+            </div>
+          </div>
+
+          <div class="config-row">
+            <div class="row-label">
+              <strong>计费方式</strong>
+              <span>按量、包月或包年购买</span>
+            </div>
+            <div class="row-control option-grid three">
+              <button v-for="item in cpuBillingOptions" :key="item.code" type="button" class="option-card" :class="{ active: cpuForm.billingMode === item.code }" @click="cpuForm.billingMode = item.code">
+                <strong>{{ item.name }}</strong>
+                <span>{{ item.description }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="config-row">
+            <div class="row-label">
+              <strong>CPU 规格</strong>
+              <span>仅展示当前计费方式下有价格的纯 CPU 规格</span>
+            </div>
+            <div class="row-control">
+              <el-select v-model="cpuForm.instanceTypeId" class="cpu-wide-select" placeholder="请选择纯 CPU 规格" :loading="cpuLoading || cpuPriceLoading">
+                <el-option v-for="item in pricedCpuInstanceTypes" :key="item.instanceTypeId" :label="`${item.instanceTypeId}（${item.cpuCores}核 / ${item.memGib}GiB）`" :value="item.instanceTypeId" />
+              </el-select>
+              <div v-if="cpuErrors.instanceTypeId || cpuErrors.catalog" class="cpu-field-error">{{ cpuErrors.instanceTypeId || cpuErrors.catalog }}</div>
+              <div v-if="cpuCatalogError" class="cpu-field-error">{{ cpuCatalogError }}</div>
+              <div v-else-if="!cpuLoading && !cpuPriceLoading && cpuForm.region && !pricedCpuInstanceTypes.length" class="cpu-field-error">当前地域与计费方式暂无可购买 CPU 规格</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="config-section">
+          <div class="section-title">磁盘和数量</div>
+          <div class="config-row">
+            <div class="row-label"><strong>系统盘</strong><span>系统盘容量</span></div>
+            <div class="row-control cpu-number-control"><el-input-number v-model="cpuForm.systemDiskGb" :min="20" :max="2048" /> <span>GiB</span><div v-if="cpuErrors.systemDiskGb" class="cpu-field-error">{{ cpuErrors.systemDiskGb }}</div></div>
+          </div>
+          <div class="config-row">
+            <div class="row-label"><strong>数据盘</strong><span>0 表示不购买，购买时最低 20G；合计最低 100G</span></div>
+            <div class="row-control cpu-number-control">
+              <el-input-number v-model="cpuForm.dataDiskGb" :min="0" :max="8192" :step="20" /> <span>GiB</span>
+              <div v-if="cpuErrors.dataDiskGb" class="cpu-field-error">{{ cpuErrors.dataDiskGb }}</div>
+              <div v-if="cpuDiskCapacityTooSmall" class="cpu-field-error">磁盘资源最低需要 100G（当前合计 {{ cpuTotalDiskCapacityGb }}G）</div>
+            </div>
+          </div>
+          <div class="config-row">
+            <div class="row-label"><strong>购买数量</strong><span>一次购买多台 CPU 实例</span></div>
+            <div class="row-control cpu-number-control"><el-input-number v-model="cpuForm.count" :min="1" :max="10" /> <span>台</span><div v-if="cpuErrors.count" class="cpu-field-error">{{ cpuErrors.count }}</div></div>
+          </div>
+          <div v-if="cpuForm.billingMode !== 'on_demand'" class="config-row">
+            <div class="row-label"><strong>购买时长</strong><span>包月或包年时长</span></div>
+            <div class="row-control cpu-number-control"><el-input-number v-model="cpuForm.duration" :min="1" :max="36" /> <span>{{ cpuForm.billingMode === 'monthly' ? '月' : '年' }}</span><div v-if="cpuErrors.duration" class="cpu-field-error">{{ cpuErrors.duration }}</div></div>
+          </div>
+          <el-alert title="CPU 实例独立于 GPU/Kubernetes 集群。服务端默认分配弹性公网 IP，按实际出公网流量后付费；当前接口不支持在购买页切换公网计费方式。" type="info" show-icon :closable="false" />
+        </section>
+      </main>
+
+      <aside class="summary-panel">
+        <div class="summary-card">
+          <div class="summary-header"><h3>配置概要</h3></div>
+          <div class="price-title">CPU 购买配置</div>
+          <div class="price-line"><span>规格</span><strong>{{ selectedCpuType ? `${selectedCpuType.cpuCores}核 / ${selectedCpuType.memGib}GiB` : '请选择 CPU 规格' }}</strong></div>
+          <div class="price-line"><span>计费方式</span><strong>{{ selectedCpuBillingName }}</strong></div>
+          <div class="price-line"><span>公网 IP</span><strong>默认分配 · 按流量后付费</strong></div>
+          <div class="price-line"><span>购买数量</span><strong>{{ cpuForm.count }} 台</strong></div>
+          <div class="price-line cpu-unit-price-line"><span>实例单价</span><strong data-testid="cpu-unit-price">{{ cpuLoading || cpuPriceLoading ? '价格加载中…' : selectedCpuUnitPrice === null ? '--' : `¥${selectedCpuUnitPrice.toFixed(4)} / ${selectedCpuPriceUnit}` }}</strong></div>
+          <div class="summary-divider" />
+          <p class="summary-note">实例费用和公网实际流量费用以服务端账单为准。</p>
+          <el-button class="order-btn cpu-order-btn" type="primary" :loading="cpuSubmitting" :disabled="cpuSubmitting || cpuLoading || cpuPriceLoading || selectedCpuUnitPrice === null" @click="submitCpuPurchase">立即购买 CPU 实例</el-button>
+          <el-alert v-if="cpuResult" class="cpu-result" :title="cpuResult.statusMessage || cpuResult.message || (cpuResult.success ? '已受理，创建中' : '购买失败')" :type="cpuResult.success ? 'success' : 'error'" show-icon :closable="false"><template #default><span v-if="cpuResult.operation_id">创建任务：{{ cpuResult.operation_id }}，请到 CPU 实例列表查看进度。</span><span v-else>请根据返回的校验结果处理后重试。</span></template></el-alert>
+          <el-descriptions v-if="cpuResult?.instances?.length" title="已创建实例" :column="1" border class="cpu-result">
+            <el-descriptions-item v-for="(item, index) in cpuResult.instances" :key="index" :label="String(item.instance_id || index)">状态 {{ item.status || '-' }}，公网 IP {{ item.public_ip || '-' }}</el-descriptions-item>
+          </el-descriptions>
+          <el-button v-if="cpuResult?.success" class="cpu-result" type="primary" @click="router.push('/cloud/gpuInstance?type=cpu')">查看 CPU 实例</el-button>
+        </div>
+      </aside>
+    </div>
+
   </div>
 </template>
 
@@ -303,6 +437,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { InfoFilled, RefreshRight, Search } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import {
   getGpuMarketList,
   getGpuMarketMeta,
@@ -313,9 +448,68 @@ import {
   GpuZoneItem,
 } from '@/api/gpuMarket'
 import { getVolcanoGpuCatalog, VolcanoGpuCatalog } from '@/api/volcanoGpu'
+import { gpuBillingLabelMap } from '@/utils/gpuBilling'
+import { getCpuInstanceTypes, getCpuPrices, getCpuRegions, getCpuZones, purchaseCpu } from '@/api/instanceV2'
+import type { CpuInstanceType, CpuPriceSpec, CpuPurchaseResult, CpuRegion, CpuZoneDetail } from '@/types/instance'
+import { firstCpuPurchaseError, hasCpuPurchaseErrors, normalizeCpuPurchaseResult, validateCpuPurchase } from '@/utils/cpuPurchase'
+import { cpuDisplayPrice, cpuPricingSnapshot } from '@/utils/cpuPricing'
+import { MIN_DISK_CAPACITY_GB, totalDiskCapacityGb } from '@/utils/diskCapacity'
+import { resolveRegionDisplayName } from '@/utils/regionDisplay'
+import { generateUUID } from '@/utils/uuid'
 
 const router = useRouter()
 const route = useRoute()
+const purchaseType = ref<'gpu' | 'cpu'>(route.query.type === 'cpu' ? 'cpu' : 'gpu')
+const publicIpEnabled = ref(true)
+const bandwidthChargeType = ref<'PayByTraffic' | 'PayByBandwidth'>('PayByTraffic')
+const bandwidthMbps = ref(5)
+
+const cpuLoading = ref(false)
+const cpuSubmitting = ref(false)
+const cpuRegions = ref<CpuRegion[]>([])
+const cpuZoneDetails = ref<CpuZoneDetail[]>([])
+const cpuInstanceTypes = ref<CpuInstanceType[]>([])
+const cpuPriceCatalog = ref<CpuPriceSpec[]>([])
+const cpuPriceLoading = ref(false)
+const cpuCatalogError = ref('')
+let cpuPriceRequestId = 0
+const cpuResult = ref<CpuPurchaseResult | null>(null)
+const cpuRequestKey = ref('')
+const cpuForm = reactive({ region: '', zone: '', instanceTypeId: '', billingMode: 'on_demand' as 'on_demand' | 'monthly' | 'yearly', duration: 1, systemDiskGb: 100, dataDiskGb: 0, count: 1 })
+const cpuErrors = reactive<Record<string, string>>({})
+const cpuBillingOptions = [
+  { code: 'on_demand' as const, name: '按量付费', description: '按实际使用时长计费' },
+  { code: 'monthly' as const, name: '包月', description: '先付费后使用，价格优惠' },
+  { code: 'yearly' as const, name: '包年', description: '适合长期稳定使用' },
+]
+const selectedCpuZones = computed(() => cpuRegions.value.find(item => item.region === cpuForm.region)?.zones || [])
+function fallbackZoneLabel(zone: string) {
+  const suffix = zone.match(/([a-zA-Z])$/)?.[1]
+  return suffix ? `可用区${suffix.toUpperCase()}` : zone
+}
+function cpuZoneLabel(zone: string) {
+  return cpuZoneDetails.value.find(item => item.zone === zone && (!item.region || item.region === cpuForm.region))?.name || fallbackZoneLabel(zone)
+}
+const pricedCpuInstanceTypes = computed(() => cpuInstanceTypes.value.filter(item =>
+  cpuForm.billingMode !== 'yearly' && cpuPriceCatalog.value.some(price => price.instanceTypeId === item.instanceTypeId && cpuDisplayPrice(price, cpuForm.billingMode) !== null),
+))
+const selectedCpuType = computed(() => pricedCpuInstanceTypes.value.find(item => item.instanceTypeId === cpuForm.instanceTypeId))
+const selectedCpuPriceSpec = computed(() => cpuPriceCatalog.value.find(item => item.instanceTypeId === cpuForm.instanceTypeId))
+const selectedCpuUnitPrice = computed(() => cpuDisplayPrice(selectedCpuPriceSpec.value, cpuForm.billingMode))
+const selectedCpuPriceUnit = computed(() => cpuForm.billingMode === 'on_demand' ? '小时' : '月')
+const selectedCpuBillingName = computed(() => cpuBillingOptions.find(item => item.code === cpuForm.billingMode)?.name || '')
+const cpuTotalDiskCapacityGb = computed(() => totalDiskCapacityGb(cpuForm.systemDiskGb, cpuForm.dataDiskGb))
+const cpuDiskCapacityTooSmall = computed(() => cpuTotalDiskCapacityGb.value < MIN_DISK_CAPACITY_GB)
+const cpuValidationErrors = computed(() => validateCpuPurchase(cpuForm, { regions: cpuRegions.value, instanceTypes: pricedCpuInstanceTypes.value, catalogLoading: cpuLoading.value || cpuPriceLoading.value }))
+const canPurchaseCpu = computed(() => !hasCpuPurchaseErrors(cpuValidationErrors.value))
+
+watch(purchaseType, (type) => {
+  if (type === 'cpu') void loadCpuPurchaseOptions()
+})
+
+watch(() => [cpuForm.region, cpuForm.billingMode], ([region], [previousRegion]) => {
+  void loadCpuTypes(region !== previousRegion)
+})
 
 const gpuList = ref<GpuMarketItem[]>([])
 const volcanoCatalog = ref<VolcanoGpuCatalog>({ regions: [] })
@@ -542,12 +736,122 @@ watch(() => filters.billingType, () => {
 
 onMounted(async () => {
   restoreOrderDraft()
+  if (purchaseType.value === 'cpu') {
+    await loadCpuPurchaseOptions()
+    return
+  }
   const initialBillingType = filters.billingType
   const [billingTypeChanged] = await Promise.all([loadMetaData(), loadGpuList(), loadVolcanoCatalog()])
   if (billingTypeChanged && filters.billingType !== initialBillingType) {
     reloadFromFirstPage()
   }
 })
+
+async function loadCpuPurchaseOptions() {
+  if (cpuRegions.value.length) return
+  cpuLoading.value = true
+  try {
+    const res = await getCpuRegions()
+    if (res.data?.success === false) throw new Error('CPU 地域目录暂不可用，请稍后重试')
+    cpuRegions.value = res.data?.regions || []
+    cpuForm.region = cpuRegions.value[0]?.region || ''
+    void loadCpuZoneDetails()
+  } catch (error: any) {
+    ElMessage.error(error?.message || '加载 CPU 购买选项失败')
+  } finally {
+    cpuLoading.value = false
+  }
+}
+
+async function loadCpuZoneDetails() {
+  try {
+    const res = await getCpuZones()
+    if (res.data?.success === false) return
+    cpuZoneDetails.value = res.data?.zones || []
+  } catch (error) {
+    console.warn('加载 CPU 可用区名称失败，将使用可用区编码:', error)
+  }
+}
+
+async function loadCpuTypes(resetZone: boolean) {
+  const requestId = ++cpuPriceRequestId
+  const region = cpuForm.region
+  const billingMode = cpuForm.billingMode
+  const previousType = resetZone ? '' : cpuForm.instanceTypeId
+  if (resetZone) cpuForm.zone = selectedCpuZones.value[0] || ''
+  cpuForm.instanceTypeId = ''
+  cpuInstanceTypes.value = []
+  cpuPriceCatalog.value = []
+  cpuCatalogError.value = ''
+  if (!region || billingMode === 'yearly') {
+    cpuPriceLoading.value = false
+    return
+  }
+  cpuPriceLoading.value = true
+  try {
+    const [typesRes, pricesRes] = await Promise.all([
+      getCpuInstanceTypes(region),
+      getCpuPrices(region, undefined, billingMode),
+    ])
+    if (requestId !== cpuPriceRequestId) return
+    if (typesRes.data?.success === false || pricesRes.data?.success === false) {
+      throw new Error('CPU 规格或价格暂不可用，请稍后重试')
+    }
+    cpuInstanceTypes.value = typesRes.data?.instance_types || []
+    cpuPriceCatalog.value = pricesRes.data?.specs || []
+    cpuForm.instanceTypeId = pricedCpuInstanceTypes.value.some(item => item.instanceTypeId === previousType)
+      ? previousType : pricedCpuInstanceTypes.value[0]?.instanceTypeId || ''
+  } catch (error: any) {
+    if (requestId === cpuPriceRequestId) cpuCatalogError.value = error?.message || '加载 CPU 规格或价格失败，请稍后重试'
+  } finally {
+    if (requestId === cpuPriceRequestId) cpuPriceLoading.value = false
+  }
+}
+
+async function submitCpuPurchase() {
+  if (cpuSubmitting.value) return
+  Object.keys(cpuErrors).forEach(key => delete cpuErrors[key])
+  Object.assign(cpuErrors, cpuValidationErrors.value)
+  if (!canPurchaseCpu.value) {
+    ElMessage.warning(firstCpuPurchaseError(cpuValidationErrors.value))
+    return
+  }
+  if (selectedCpuUnitPrice.value === null || !selectedCpuPriceSpec.value) {
+    ElMessage.warning('当前 CPU 价格暂不可用，请刷新后重试')
+    return
+  }
+  cpuSubmitting.value = true
+  cpuResult.value = null
+  if (!cpuRequestKey.value) cpuRequestKey.value = generateUUID()
+  try {
+    const res = await purchaseCpu({
+      ...cpuForm,
+      requestKey: cpuRequestKey.value,
+      pricing: cpuPricingSnapshot(selectedCpuPriceSpec.value, cpuForm),
+    })
+    cpuResult.value = normalizeCpuPurchaseResult(res.data)
+    if (res.data?.success) {
+      try {
+        sessionStorage.setItem('cpuPurchaseResult', JSON.stringify({
+          form: { ...cpuForm },
+          spec: selectedCpuType.value ? { cpuCores: selectedCpuType.value.cpuCores, memGib: selectedCpuType.value.memGib } : undefined,
+          result: cpuResult.value,
+        }))
+      } catch (error) { console.warn('保存 CPU 创建结果失败:', error) }
+      ElMessage.success('CPU 实例已受理，正在创建中')
+      router.push('/cpuPurchaseResult')
+    }
+    else ElMessage.error(res.data?.message || 'CPU 实例购买失败')
+  } catch (error: any) {
+    const message = error?.code === 'ECONNABORTED' || error?.message?.toLowerCase?.().includes('timeout')
+      ? '请求状态未知，请到 CPU 实例列表确认当前状态'
+      : error?.message || 'CPU 实例购买失败'
+    cpuResult.value = { success: false, message, statusMessage: message, accepted: false } as CpuPurchaseResult
+    ElMessage.warning(message)
+  } finally {
+    cpuSubmitting.value = false
+  }
+}
 
 async function loadMetaData() {
   try {
@@ -625,11 +929,11 @@ async function loadVolcanoCatalog() {
 
 function normalizeBillingTypes(types: GpuBillingType[]) {
   const canonicalTypes = [
-    { code: 'on_demand', name: '按量计费' },
-    { code: 'hourly', name: '按小时' },
-    { code: 'monthly', name: '按月' },
-    { code: 'daily', name: '按天' },
-    { code: 'weekly', name: '按周' },
+    { code: 'on_demand', name: gpuBillingLabelMap.on_demand },
+    { code: 'hourly', name: gpuBillingLabelMap.hourly },
+    { code: 'monthly', name: gpuBillingLabelMap.monthly },
+    { code: 'daily', name: gpuBillingLabelMap.daily },
+    { code: 'weekly', name: gpuBillingLabelMap.weekly },
   ]
   if (!types.length) return canonicalTypes
   const typeMap = new Map(types.map((item) => [item.code, item]))
@@ -800,6 +1104,7 @@ function cacheOrderDraft(resourceId: number) {
   if (!selectedGpu.value) return
   const draft = {
     source: 'computeListNew',
+    draftVersion: 2,
     resourceId,
     billingType: filters.billingType,
     billingTypeName: selectedBillingTypeName.value,
@@ -809,6 +1114,9 @@ function cacheOrderDraft(resourceId: number) {
     configAmount: configAmount.value,
     discountAmount: discountAmount.value,
     totalAmount: totalAmount.value,
+    publicIpEnabled: publicIpEnabled.value,
+    bandwidthChargeType: bandwidthChargeType.value,
+    bandwidthMbps: bandwidthMbps.value,
     prices: selectedGpu.value.source === 'volcano' ? [
       { billingType: 'on_demand', billingTypeName: '按量计费', unitPrice: selectedGpu.value.salePrice ?? selectedGpu.value.price },
       { billingType: 'hourly', billingTypeName: '按小时', unitPrice: selectedGpu.value.salePrice ?? selectedGpu.value.price },
@@ -839,6 +1147,11 @@ function restoreOrderDraft() {
     filters.billingType = draft.billingType || filters.billingType
     filters.region = draft.regionCode || draft.resource.regionCode || draft.resource.region || ''
     filters.zone = draft.zoneCode || ''
+    // 公网 IP 默认随实例开通；仅当新版本订单草稿明确关闭时保持关闭
+    const draftVersion = Number(draft.draftVersion) || 0
+    publicIpEnabled.value = draftVersion >= 2 ? draft.publicIpEnabled !== false : true
+    bandwidthChargeType.value = draft.bandwidthChargeType === 'PayByBandwidth' ? 'PayByBandwidth' : 'PayByTraffic'
+    bandwidthMbps.value = Number(draft.bandwidthMbps) || 5
     selectedGpu.value = draft.resource
     setInstanceCount(Number(draft.quantity) || 1)
     setDurationCount(Number(draft.duration) || 1)
@@ -883,6 +1196,45 @@ function formatMoney(value: string | number | undefined) {
   color: #111827;
   font-size: 20px;
   font-weight: 700;
+}
+
+.purchase-type-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-left: auto;
+  border: 1px solid #f1d3a1;
+  border-radius: 8px;
+  background: #fffdf8;
+}
+.purchase-type {
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 16px;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  font-weight: 600;
+}
+.purchase-type.active {
+  color: #fff;
+  background: #ff6a00;
+}
+.purchase-type:not(.active):hover { color: #ff6a00; background: #fff0d4; }
+
+.public-network-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+  max-width: 720px;
+}
+
+.public-bandwidth-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #4b5563;
 }
 
 .product-mode {
@@ -1002,6 +1354,13 @@ function formatMoney(value: string | number | undefined) {
 
 .row-control {
   min-width: 0;
+}
+
+.cpu-field-error {
+  margin-top: 8px;
+  color: #d14343;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .option-grid {

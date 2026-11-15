@@ -1,5 +1,8 @@
 <template>
-  <div class="availability-page" v-loading="loading">
+  <div class="volcano-resource-management">
+    <el-tabs v-model="activeTab"><el-tab-pane name="gpu" label="GPU 资源与价格" /><el-tab-pane name="cpu" label="CPU 资源与价格" /></el-tabs>
+    <CpuPricePanel v-if="activeTab === 'cpu'" />
+  <div v-show="activeTab === 'gpu'" class="availability-page" v-loading="loading">
     <div class="availability-toolbar card">
       <div>
         <div class="page-title">火山云GPU资源管理</div>
@@ -184,10 +187,13 @@
       </template>
     </el-dialog>
   </div>
+  </div>
 </template>
 
 <script setup lang="ts" name="VolcanoGpuAvailability">
 import { computed, onMounted, ref } from "vue";
+import CpuPricePanel from "./CpuPricePanel.vue";
+const activeTab = ref("gpu");
 import { Refresh, RefreshLeft } from "@element-plus/icons-vue";
 import dayjs from "dayjs";
 import { ElMessage, ElMessageBox } from "element-plus";

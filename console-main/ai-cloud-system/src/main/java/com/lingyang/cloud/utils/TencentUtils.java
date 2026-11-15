@@ -22,8 +22,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class TencentUtils {
 
-    public static final String SECRET_ID = System.getenv().getOrDefault("TENCENT_SECRET_ID", "");
-    public static final String SECRET_KEY = System.getenv().getOrDefault("TENCENT_SECRET_KEY", "");
+    public static final String SECRET_ID = "AKIDxxlMp59fGl490rb8RYSAh1A8sQozvhKm";
+    public static final String SECRET_KEY = "INGySimhQvFZljjIgvynQq20mLj4ED1c";
 
     public static final String MERCHANT_ID = "00EI2505161114099784";
 
@@ -91,7 +91,7 @@ public class TencentUtils {
             // 以下代码示例仅供参考，建议采用更安全的方式来使用密钥
             // 请参见：https://cloud.tencent.com/document/product/1278/85305
             // 密钥可前往官网控制台 https://console.cloud.tencent.com/cam/capi 进行获取
-            Credential cred = new Credential(SECRET_ID, SECRET_KEY);
+            Credential cred = new Credential("AKIDxxlMp59fGl490rb8RYSAh1A8sQozvhKm", "INGySimhQvFZljjIgvynQq20mLj4ED1c");
             // 使用临时密钥示例
             // Credential cred = new Credential("SecretId", "SecretKey", "Token");
             // 实例化一个http选项，可选的，没有特殊需求可以跳过

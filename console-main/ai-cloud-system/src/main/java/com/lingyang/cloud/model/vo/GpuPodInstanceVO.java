@@ -40,6 +40,12 @@ public class GpuPodInstanceVO implements Serializable {
     @Schema(description = "状态")
     private String status;
 
+    @Schema(description = "实例来源")
+    private String origin;
+
+    @Schema(description = "状态说明")
+    private String statusMessage;
+
     @Schema(description = "状态中文")
     private String statusText;
 

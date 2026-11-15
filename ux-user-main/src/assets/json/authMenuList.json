@@ -175,13 +175,20 @@
   {
     "path": "/containerConsole",
     "name": "ContainerConsole",
-    "meta": { "icon": "Operation", "title": "容器控制台","hideMenu":false },
+    "meta": {
+      "icon": "Operation",
+      "title": "容器控制台",
+      "hideMenu": false
+    },
     "children": [
       {
         "path": "/resourcesOverview",
         "name": "ResourcesOverview",
         "component": "ContainerConsole/resourcesOverview/index",
-        "meta": { "title": "资源概览",  "hideMenu": true }
+        "meta": {
+          "title": "资源概览",
+          "hideMenu": true
+        }
       },
       {
         "path": "/cloud/instanceList",
@@ -197,7 +204,9 @@
         "path": "/containerList",
         "name": "ContainerList",
         "component": "ContainerConsole/containerList/index",
-        "meta": { "title": "容器列表" }
+        "meta": {
+          "title": "容器列表"
+        }
       },
       {
         "path": "/containerDetails",
@@ -233,7 +242,9 @@
         "path": "/mirrorWarehouse",
         "name": "mirrorWarehouse",
         "component": "ContainerConsole/mirrorWarehouse/index",
-        "meta": { "title": "镜像仓库" }
+        "meta": {
+          "title": "镜像仓库"
+        }
       },
       {
         "path": "/createMirrorInstance",
@@ -267,7 +278,6 @@
       }
     ]
   },
-
   {
     "path": "/accountManagement",
     "name": "AccountManagement",
@@ -281,25 +291,33 @@
         "path": "/accountCenter",
         "name": "AccountCenter",
         "component": "AccountManagement/accountCenter/index",
-        "meta": { "title": "账户中心" }
+        "meta": {
+          "title": "账户中心"
+        }
       },
       {
         "path": "/rechargeCenter",
         "name": "RechargeCenter",
         "component": "AccountManagement/rechargeCenter/index",
-        "meta": { "title": "充值中心" }
+        "meta": {
+          "title": "充值中心"
+        }
       },
       {
         "path": "/voucherCollectionCenter",
         "name": "VoucherCollectionCenter",
         "component": "AccountManagement/voucherCollectionCenter/index",
-        "meta": { "title": "领券中心" }
+        "meta": {
+          "title": "领券中心"
+        }
       },
       {
         "path": "/authenticationCenter",
         "name": "AuthenticationCenter",
         "component": "AccountManagement/authenticationCenter/index",
-        "meta": { "title": "实名认证" }
+        "meta": {
+          "title": "实名认证"
+        }
       }
     ]
   },
@@ -307,13 +325,21 @@
     "path": "/expenseBill",
     "name": "ExpenseBill",
     "component": "ExpenseBill/index",
-    "meta": { "icon": "Postcard", "title": "费用账单", "hideMenu": false }
+    "meta": {
+      "icon": "Postcard",
+      "title": "费用账单",
+      "hideMenu": false
+    }
   },
   {
     "path": "/order",
     "name": "Order",
     "component": "Order/index",
-    "meta": { "icon": "Document", "title": "订单管理", "hideMenu": false },
+    "meta": {
+      "icon": "Document",
+      "title": "订单管理",
+      "hideMenu": false
+    },
     "children": [
       {
         "path": "/orderDetails",
@@ -331,21 +357,29 @@
     "path": "/aigcOrder",
     "name": "aigcOrder",
     "component": "aigcOrder/index",
-    "meta": { "icon": "Document", "title": "AGI-C管理", "hideMenu": false }
-    
+    "meta": {
+      "icon": "Document",
+      "title": "AGI-C管理",
+      "hideMenu": false
+    }
   },
   {
     "path": "/storage",
     "name": "Storage",
     "component": "",
-    "meta": { "icon": "Coin", "title": "存储控制台", "hideMenu": false },
-
+    "meta": {
+      "icon": "Coin",
+      "title": "存储控制台",
+      "hideMenu": false
+    },
     "children": [
       {
         "path": "/objectStorage",
         "name": "objectStorage",
         "component": "storage/object/index",
-        "meta": { "title": "对象存储" }
+        "meta": {
+          "title": "对象存储"
+        }
       },
       {
         "path": "/createBucket",
@@ -366,7 +400,6 @@
           "activeMenu": "/object",
           "hideMenu": true
         },
-        
         "children": [
           {
             "path": "/storageDetail/upload",
@@ -386,7 +419,11 @@
     "path": "/contractManagement",
     "name": "ContractManagement",
     "component": "ContractManagement/index",
-    "meta": { "icon": "Notebook", "title": "合同管理" ,"hideMenu":false},
+    "meta": {
+      "icon": "Notebook",
+      "title": "合同管理",
+      "hideMenu": false
+    },
     "children": [
       {
         "path": "/contractManagement/applyForAContract",
@@ -399,19 +436,25 @@
         }
       }
     ]
-  }, 
+  },
   {
     "path": "/payControl",
     "name": "payControl",
     "component": "payControl/index",
-    "meta": { "icon": "payControl", "title": "支付控制台" ,"hideMenu":true}
-  
+    "meta": {
+      "icon": "payControl",
+      "title": "支付控制台",
+      "hideMenu": true
+    }
   },
   {
     "path": "/popularize",
     "name": "popularize",
     "component": "",
-    "meta": { "icon": "Menu", "title": "推广管理" },
+    "meta": {
+      "icon": "Menu",
+      "title": "推广管理"
+    },
     "children": [
       {
         "path": "/popularize/customerManagement",
@@ -420,14 +463,16 @@
         "meta": {
           "title": "推广客户"
         }
-      }, {
+      },
+      {
         "path": "/popularize/rebateManagement",
         "name": "rebateManagement",
         "component": "popularize/rebateManagement",
         "meta": {
           "title": "返佣订单"
         }
-      }, {
+      },
+      {
         "path": "/popularize/incomeManagement",
         "name": "incomeManagement",
         "component": "popularize/incomeManagement",
@@ -435,7 +480,6 @@
           "title": "收入结算"
         }
       }
-      
     ]
   }
 ]

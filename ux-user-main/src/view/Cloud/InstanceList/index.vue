@@ -6,7 +6,7 @@
         <h2 class="page-title">{{ pageTitle }}</h2>
         <p class="page-desc">{{ pageDesc }}</p>
       </div>
-      <div class="header-right">
+      <div v-if="!isGpuInstanceRoute" class="header-right">
         <el-button type="primary" @click="handleCreateInstance">
           <el-icon><Plus /></el-icon>
           创建实例
@@ -32,6 +32,12 @@
       </template>
     </el-alert>
 
+    <el-tabs v-model="activeTab" class="instance-tabs" @tab-change="handleTabChange">
+      <el-tab-pane label="GPU实例" name="gpu" />
+      <el-tab-pane label="CPU实例" name="cpu" />
+    </el-tabs>
+
+    <template v-if="activeTab === 'gpu'">
     <!-- 统计卡片 -->
     <div class="stats-cards">
       <div class="stat-card">
@@ -118,11 +124,60 @@
       </div>
     </div>
 
+    </template>
+
+    <template v-else>
+      <div class="stats-cards">
+        <div v-for="stat in cpuStatCards" :key="stat.label" :class="['stat-card', stat.className]">
+          <div class="stat-value">{{ stat.value }}</div><div class="stat-label">{{ stat.label }}</div>
+        </div>
+      </div>
+      <el-form class="cpu-filter-bar" inline @submit.prevent="applyCpuFilters">
+        <el-form-item label="实例"><el-input v-model="cpuFilterDraft.keyword" placeholder="实例名称 / ID" clearable /></el-form-item>
+        <el-form-item label="地域"><el-select v-model="cpuFilterDraft.region" placeholder="全部地域" clearable><el-option v-for="region in cpuRegionOptions" :key="region" :label="region" :value="region" /></el-select></el-form-item>
+        <el-form-item label="状态"><el-select v-model="cpuFilterDraft.status" placeholder="全部状态" clearable><el-option v-for="status in cpuStatusOptions" :key="status.value" :label="status.label" :value="status.value" /></el-select></el-form-item>
+        <el-form-item><el-button type="primary" native-type="submit">搜索</el-button><el-button @click="resetCpuFilters">重置</el-button></el-form-item>
+      </el-form>
+      <div class="instance-workbench">
+        <CpuInstanceTable :data="pagedCpuInstances" :loading="cpuLoading" :total="filteredCpuInstances.length" :abnormal-total="abnormalCpuInstances.length" :page="cpuPage" :page-size="cpuPageSize" @page-change="(page) => cpuPage = page" @size-change="(size) => { cpuPageSize = size; cpuPage = 1 }" @refresh="refreshCpuList" @action="handleCpuAction" @batch-clear="clearAllCpuAbnormal" @batch-release="releaseCreatingCpuInstances" />
+        <div :class="['instance-detail-host', { 'is-open': cpuDetailVisible }]" @click.self="cpuDetailVisible = false">
+          <div class="instance-detail-dialog"><CpuInstanceDetail :instance="cpuDetail" @close="cpuDetailVisible = false" @action="handleCpuAction" /></div>
+        </div>
+      </div>
+    </template>
+
     <!-- 更多操作对话框 -->
     <MoreActionsDialog
       v-model="moreActionsVisible"
       :instance="currentInstance"
       @success="handleActionSuccess"
+    />
+
+    <ResetPasswordDialog
+      v-model="resetPasswordVisible"
+      :instance="currentInstance"
+      @success="handleActionSuccess"
+    />
+
+    <SetNameDialog
+      v-model="setNameVisible"
+      :instance="currentInstance"
+      @success="handleActionSuccess"
+    />
+
+    <GpuResizeDialog v-model="resizeVisible" :instance-id="currentInstance?.id || currentCpuInstance?.instance_id || currentCpuInstance?.id" :mode="resizeMode" @refresh="handleResizeSuccess" />
+
+    <CpuInstanceActionDialog
+      v-model="cpuActionVisible"
+      :mode="cpuActionMode"
+      :instance="cpuActionInstance"
+      @success="handleCpuActionSuccess"
+    />
+
+    <SshInfoDialog
+      v-model="sshVisible"
+      :instance-id="sshInstanceId"
+      :source="sshSource"
     />
 
     <RenewDialog
@@ -206,10 +261,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import type { Instance, VncInfo } from '@/types/instance'
 import { getInstanceVncInfo } from '@/api/instance'
 import { useInstanceList } from './composables/useInstanceList'
@@ -221,18 +276,67 @@ import BatchActions from './components/BatchActions.vue'
 import InstanceTable from './components/InstanceTable.vue'
 import InstanceDrawer from './components/InstanceDrawer.vue'
 import MoreActionsDialog from './components/MoreActionsDialog.vue'
+import ResetPasswordDialog from './components/ResetPasswordDialog.vue'
+import SetNameDialog from './components/SetNameDialog.vue'
 import RenewDialog from './components/RenewDialog.vue'
 import BatchRenewDialog from './components/BatchRenewDialog.vue'
 import ShutdownScheduleDialog from './components/ShutdownScheduleDialog.vue'
 import ToolsDialog from './components/ToolsDialog.vue'
+import CpuInstanceTable from './components/CpuInstanceTable.vue'
+import CpuInstanceDetail from './components/CpuInstanceDetail.vue'
+import { isCpuInstance, isGpuInstance, cpuStatusInfo, cpuCanAction, cpuActionDisabledReason, cpuCloudInstanceId, cpuDetailTarget, cpuRowKey } from '@/utils/instanceSource'
+import { clearCpuOperation, getCpuCreationOperation, getCpuInstances, startCpuInstance, stopCpuInstance, restartCpuInstance, releaseCpuInstance, getCpuInstanceDetail } from '@/api/instanceV2'
+import type { CpuInstance } from '@/types/instance'
+import GpuResizeDialog from './components/GpuResizeDialog.vue'
+import CpuInstanceActionDialog from './components/CpuInstanceActionDialog.vue'
+import SshInfoDialog from './components/SshInfoDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
+const activeTab = ref((route.query.type === 'cpu' ? 'cpu' : 'gpu'))
+const cpuInstances = ref<CpuInstance[]>([])
+const cpuLoading = ref(false)
+const cpuDetail = ref<any>(null)
+const cpuPage = ref(1)
+const cpuPageSize = ref(10)
+const cpuFilterDraft = reactive({ keyword: '', region: '', status: '' })
+const cpuFilters = ref({ ...cpuFilterDraft })
+const cpuStatusOptions = [
+  { value: 'creating', label: '创建中' }, { value: 'running', label: '运行中' }, { value: 'stopped', label: '已停止' },
+  { value: 'starting', label: '开机中' }, { value: 'stopping', label: '关机中' }, { value: 'releasing', label: '释放中' },
+  { value: 'released', label: '已释放' }, { value: 'failed', label: '创建失败' }, { value: 'error', label: '异常' },
+]
+const cpuRegionOptions = computed(() => [...new Set(cpuInstances.value.map(row => row.region).filter(Boolean))] as string[])
+const cpuStatCards = computed(() => {
+  const running = cpuInstances.value.filter(row => cpuStatusInfo(row.status).value === 'running').length
+  const stopped = cpuInstances.value.filter(row => cpuStatusInfo(row.status).value === 'stopped').length
+  return [{ label: '总实例数', value: cpuInstances.value.length, className: '' }, { label: '运行中', value: running, className: 'running' }, { label: '已停止', value: stopped, className: 'stopped' }, { label: '其他状态', value: cpuInstances.value.length - running - stopped, className: 'other' }]
+})
+const filteredCpuInstances = computed(() => cpuInstances.value.filter(row => {
+  const { keyword, region, status } = cpuFilters.value
+  return (!keyword || [row.instance_name, row.name, row.instance_id, row.id].some(value => value?.toLowerCase().includes(keyword.toLowerCase().trim())))
+    && (!region || row.region === region) && (!status || cpuStatusInfo(row.status).value === status)
+}))
+const pagedCpuInstances = computed(() => filteredCpuInstances.value.slice((cpuPage.value - 1) * cpuPageSize.value, cpuPage.value * cpuPageSize.value))
+const abnormalCpuInstances = computed(() => cpuInstances.value.filter(row => ['failed', 'error'].includes(cpuStatusInfo(row.status).value)))
+const applyCpuFilters = () => { cpuFilters.value = { ...cpuFilterDraft }; cpuPage.value = 1 }
+const resetCpuFilters = () => { Object.assign(cpuFilterDraft, { keyword: '', region: '', status: '' }); applyCpuFilters() }
+const refreshCpuList = () => { void fetchCpuList() }
+const resizeVisible = ref(false)
+const resizeMode = ref<'resize' | 'gpu'>('resize')
+const currentCpuInstance = ref<CpuInstance | null>(null)
+const cpuDetailVisible = ref(false)
+const cpuActionVisible = ref(false)
+const cpuActionMode = ref<'rename' | 'resetPassword'>('rename')
+const cpuActionInstance = ref<CpuInstance | null>(null)
+const sshVisible = ref(false)
+const sshInstanceId = ref('')
+const sshSource = ref<'gpu' | 'cpu'>('gpu')
 const isGpuInstanceRoute = computed(() => route.path === '/cloud/gpuInstance')
-const pageTitle = computed(() => isGpuInstanceRoute.value ? 'GPU实例列表' : String(route.meta?.title || '容器实例'))
+const pageTitle = computed(() => isGpuInstanceRoute.value ? (activeTab.value === 'cpu' ? 'CPU实例列表' : 'GPU实例列表') : String(route.meta?.title || '容器实例'))
 const pageDesc = computed(() =>
   isGpuInstanceRoute.value
-    ? '统一管理GPU算力资源，支持开机、关机、重启、续费和释放等操作'
+    ? (activeTab.value === 'cpu' ? '管理独立 CPU 云主机，查看资源、网络、创建状态和生命周期' : '统一管理GPU算力资源，支持开机、关机、重启、续费和释放等操作')
     : '管理您的GPU云服务器实例，支持开机、关机、重启等操作'
 )
 const creationNoticeVisible = ref(route.query.createSuccess === '1')
@@ -282,14 +386,185 @@ const {
   timeRange: metricsTimeRange,
   fetchMetrics,
   setTimeRange: setMetricsTimeRange,
-  refreshMetrics,
-  startAutoRefresh,
-  stopAutoRefresh
+  refreshMetrics
 } = useMetrics()
+
+const handleTabChange = async (tab: string) => {
+  await router.replace({ path: route.path, query: { ...route.query, type: tab === 'cpu' ? 'cpu' : undefined } })
+  cpuDetailVisible.value = false
+  handleDrawerClose()
+  if (tab === 'cpu') await fetchCpuList()
+}
+const fetchCpuList = async () => {
+  cpuLoading.value = true
+  try {
+    const res = await getCpuInstances()
+    if (res.data?.success === false) throw new Error(res.data.message || 'CPU实例加载失败')
+    cpuInstances.value = (res.data?.instances || []).filter(isCpuInstance)
+    cpuPage.value = Math.max(1, Math.min(cpuPage.value, Math.ceil(filteredCpuInstances.value.length / cpuPageSize.value)))
+    if (cpuDetail.value) {
+      const updated = cpuInstances.value.find(row => cpuRowKey(row) === cpuRowKey(cpuDetail.value))
+      if (updated) cpuDetail.value = { ...cpuDetail.value, ...updated }
+    }
+  } catch (error: any) { ElMessage.error(error?.message || 'CPU实例加载失败') }
+  finally {
+    cpuLoading.value = false
+  }
+}
+const refreshCpuDetail = async () => {
+  // Operation-only rows have no cloud instance ID; refreshing their instance
+  // detail would query /instances/{operation_id} and fail upstream.
+  const id = cpuCloudInstanceId(cpuDetail.value)
+  if (!id) return
+  try {
+    const res = await getCpuInstanceDetail(id)
+    if (res.data?.success === false) return
+    const detail = res.data?.instance || res.data
+    if (isCpuInstance(detail)) cpuDetail.value = { ...cpuDetail.value, ...detail }
+  } catch {
+    // Keep the last known detail when a refresh races with a state transition.
+  }
+}
+
+const handleCpuActionSuccess = async () => {
+  await fetchCpuList()
+  await refreshCpuDetail()
+}
+
+const handleCpuAction = async (action: string, row: CpuInstance) => {
+  if (!isCpuInstance(row)) return void ElMessage.error('实例来源不匹配，请刷新列表后重试')
+  if (action !== 'detail' && !cpuCanAction(row, action))
+    return void ElMessage.warning(cpuActionDisabledReason(row, action) || '当前状态不支持此操作，请刷新后重试')
+  // 创建任务尚未拿到上游实例 ID 时没有可释放的目标，按接口约定提示等待创建完成。
+  if (action === 'release' && cpuStatusInfo(row.status).value === 'creating' && !cpuCloudInstanceId(row))
+    return void ElMessage.warning('实例正在创建中，请等创建完成后再释放')
+  const instanceId = cpuCloudInstanceId(row)
+  const detailTarget = cpuDetailTarget(row)
+  try {
+    // 创建任务占位记录只有 operation_id，详情必须走 /operations/{id}。
+    // 先展示列表中的本地数据，接口刷新失败时也不会阻断详情。
+    if (action === 'detail') {
+      cpuDetail.value = { ...row }
+      cpuDetailVisible.value = true
+      try {
+        if (detailTarget.kind === 'instance') {
+          const res = await getCpuInstanceDetail(detailTarget.id)
+          if (res.data?.success !== false) {
+            const detail = res.data?.instance || res.data
+            if (isCpuInstance(detail)) cpuDetail.value = { ...cpuDetail.value, ...detail }
+          }
+        } else if (detailTarget.kind === 'operation') {
+          const res = await getCpuCreationOperation(detailTarget.id)
+          const operation = res.data || {}
+          const created = operation.instances?.[0] as CpuInstance | undefined
+          cpuDetail.value = {
+            ...cpuDetail.value,
+            ...(created || {}),
+            operation_id: detailTarget.id,
+            operation_status: operation.operation_status,
+            status_message: operation.message || row.status_message || row.message,
+            status: created?.status || row.status,
+            message: operation.message || row.message,
+          }
+        }
+      } catch {
+        // 列表数据已足够展示创建任务；不为详情刷新再弹一次错误。
+      }
+      return
+    }
+    if (action === 'clear') {
+      const target = row.operation_id || instanceId
+      if (!target) return void ElMessage.error('异常记录缺少可删除的标识')
+      await ElMessageBox.confirm(`确定清除 ${target} 的异常记录吗？清除后列表中将不再显示该记录。`, '确认清除', { type: 'warning', confirmButtonText: '清除', cancelButtonText: '取消' })
+      if (row.operation_id) {
+        const res = await clearCpuOperation(row.operation_id)
+        if (res.data?.success === false) throw new Error(res.data.message || '清除异常记录失败')
+      } else {
+        if (!instanceId) return void ElMessage.error('异常记录缺少可删除的标识')
+        const res = await releaseCpuInstance(instanceId)
+        if (res.data?.success === false) throw new Error(res.data.message || '清除异常记录失败')
+      }
+      ElMessage.success('异常记录已清除')
+      cpuDetailVisible.value = false
+      await fetchCpuList()
+      return
+    }
+    if (!instanceId) return void ElMessage.warning('实例正在创建中，请等创建完成后再操作')
+    if (action === 'resize') {
+      currentCpuInstance.value = row
+      currentInstance.value = null
+      resizeMode.value = 'resize'
+      resizeVisible.value = true
+      return
+    }
+    if (action === 'ssh') {
+      sshInstanceId.value = instanceId
+      sshSource.value = 'cpu'
+      sshVisible.value = true
+      return
+    }
+    if (['resetPassword', 'rename', 'setName'].includes(action)) {
+      cpuActionInstance.value = row
+      cpuActionMode.value = action === 'resetPassword' ? 'resetPassword' : 'rename'
+      cpuActionVisible.value = true
+      return
+    }
+    if (action === 'release') await ElMessageBox.confirm(`确定释放 ${instanceId} 吗？云主机和数据将不可恢复`, '确认释放', { type: 'warning' })
+    if (action === 'restart') await ElMessageBox.confirm(`确定重启 ${instanceId} 吗？重启期间实例将短暂不可用。`, '确认重启', { type: 'warning' })
+    const res = action === 'release' ? await releaseCpuInstance(instanceId)
+      : action === 'start' ? await startCpuInstance(instanceId)
+      : action === 'stop' ? await stopCpuInstance(instanceId)
+      : action === 'restart' ? await restartCpuInstance(instanceId) : null
+    if (!res) return
+    if (res.data?.success === false) throw new Error(res.data.message || 'CPU实例操作失败')
+    ElMessage.success(res.data?.message || '操作已完成')
+    if (action === 'release') cpuDetailVisible.value = false
+    await fetchCpuList()
+    await refreshCpuDetail()
+  } catch (error: any) { if (error !== 'cancel') ElMessage.error(error?.message || 'CPU实例操作失败') }
+}
+const clearAllCpuAbnormal = async (selectedRows: CpuInstance[] = []) => {
+  const rows = selectedRows.length ? selectedRows : abnormalCpuInstances.value
+  if (!rows.length) return
+  try {
+    await ElMessageBox.confirm(`确定删除当前 ${rows.length} 条异常记录吗？删除后不可恢复。`, '批量删除异常', { type: 'warning', confirmButtonText: '全部删除', cancelButtonText: '取消' })
+    const results: PromiseSettledResult<any>[] = []
+    for (let index = 0; index < rows.length; index += 20) {
+      const batch = rows.slice(index, index + 20)
+      results.push(...await Promise.allSettled(batch.map(row => {
+        if (row.operation_id) return clearCpuOperation(row.operation_id)
+        const instanceId = cpuCloudInstanceId(row)
+        return instanceId ? releaseCpuInstance(instanceId) : Promise.reject(new Error('异常记录缺少实例 ID'))
+      })))
+    }
+    const failed = results.filter(result => result.status === 'rejected' || (result.status === 'fulfilled' && result.value.data?.success === false)).length
+    if (failed) ElMessage.warning(`已删除 ${rows.length - failed} 条，${failed} 条删除失败`)
+    else ElMessage.success(`已删除 ${rows.length} 条异常记录`)
+    cpuDetailVisible.value = false
+    await fetchCpuList()
+  } catch (error: any) { if (error !== 'cancel') ElMessage.error(error?.message || '批量删除异常失败') }
+}
+
+const releaseCreatingCpuInstances = async (rows: CpuInstance[]) => {
+  const releaseable = rows.filter(row => cpuStatusInfo(row.status).value === 'creating' && cpuCloudInstanceId(row))
+  if (!releaseable.length) return
+  try {
+    await ElMessageBox.confirm(`确定释放当前 ${releaseable.length} 个创建中的 CPU 实例吗？释放后不可恢复。`, '批量释放创建中', { type: 'warning', confirmButtonText: '批量释放', cancelButtonText: '取消' })
+    const results: PromiseSettledResult<any>[] = []
+    for (let index = 0; index < releaseable.length; index += 20) {
+      const batch = releaseable.slice(index, index + 20)
+      results.push(...await Promise.allSettled(batch.map(row => releaseCpuInstance(cpuCloudInstanceId(row)))))
+    }
+    const failed = results.filter(result => result.status === 'rejected' || (result.status === 'fulfilled' && result.value.data?.success === false)).length
+    if (failed) ElMessage.warning(`已释放 ${releaseable.length - failed} 个，${failed} 个释放失败`)
+    else ElMessage.success(`已提交释放 ${releaseable.length} 个创建中实例`)
+    await fetchCpuList()
+  } catch (error: any) { if (error !== 'cancel') ElMessage.error(error?.message || '批量释放创建中实例失败') }
+}
 
 // 创建实例
 const handleCreateInstance = () => {
-  router.push(isGpuInstanceRoute.value ? '/computeListNew' : '/cloud/createInstance')
+  router.push(activeTab.value === 'cpu' ? '/computeListNew?type=cpu' : isGpuInstanceRoute.value ? '/computeListNew' : '/cloud/createInstance')
 }
 
 // 抽屉
@@ -300,6 +575,8 @@ const detailCloseRef = ref<HTMLButtonElement | null>(null)
 
 // 更多操作对话框
 const moreActionsVisible = ref(false)
+const resetPasswordVisible = ref(false)
+const setNameVisible = ref(false)
 const renewVisible = ref(false)
 const batchRenewVisible = ref(false)
 const shutdownScheduleVisible = ref(false)
@@ -329,24 +606,38 @@ const syncDetailHostVisible = (visible: boolean) => {
 
 // 行点击
 const handleRowClick = (row: Instance) => {
-  stopAutoRefresh()
+  if (!isGpuInstance(row)) return void ElMessage.error('实例来源不匹配，请刷新列表后重试')
   currentInstance.value = row
   syncDetailHostVisible(true)
   nextTick(() => syncDetailHostVisible(true))
-  startAutoRefresh()
   fetchMetrics(row.id)
 }
 
 // 实例操作
 const handleInstanceAction = async (action: string, instance: Instance) => {
+  if (!isGpuInstance(instance)) return void ElMessage.error('实例来源不匹配，请刷新列表后重试')
   if (action === 'detail') {
     handleRowClick(instance)
     return
   }
 
-  if (['resetPassword', 'setName'].includes(action)) {
+  if (action === 'ssh') {
     currentInstance.value = instance
-    moreActionsVisible.value = true
+    sshInstanceId.value = instance.id
+    sshSource.value = 'gpu'
+    sshVisible.value = true
+    return
+  }
+
+  if (action === 'resetPassword') {
+    currentInstance.value = instance
+    resetPasswordVisible.value = true
+    return
+  }
+
+  if (['setName', 'rename'].includes(action)) {
+    currentInstance.value = instance
+    setNameVisible.value = true
     return
   }
 
@@ -368,6 +659,22 @@ const handleInstanceAction = async (action: string, instance: Instance) => {
     return
   }
 
+  if (action === 'resize') {
+    currentInstance.value = instance
+    currentCpuInstance.value = null
+    resizeMode.value = 'resize'
+    resizeVisible.value = true
+    return
+  }
+
+  if (action === 'gpuResize') {
+    currentInstance.value = instance
+    currentCpuInstance.value = null
+    resizeMode.value = 'gpu'
+    resizeVisible.value = true
+    return
+  }
+
   if (action === 'vnc') {
     currentInstance.value = instance
     await handleVncConnect(instance)
@@ -383,6 +690,14 @@ const handleInstanceAction = async (action: string, instance: Instance) => {
 // 操作成功回调
 const handleActionSuccess = () => {
   fetchList()
+}
+
+const handleResizeSuccess = () => {
+  if (resizeMode.value === 'resize' && currentCpuInstance.value) {
+    refreshCpuList()
+    return
+  }
+  handleActionSuccess()
 }
 
 const handleVncConnect = async (instance: Instance) => {
@@ -420,6 +735,7 @@ const handleNativeDetailClose = (event: Event) => {
 
 onMounted(() => {
   detailCloseRef.value?.addEventListener('click', handleNativeDetailClose, true)
+  if (activeTab.value === 'cpu') fetchCpuList()
   if (route.query.createSuccess === '1') {
     ElMessage.success('实例已提交创建，当前状态可在列表中查看')
   }
@@ -427,12 +743,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   detailCloseRef.value?.removeEventListener('click', handleNativeDetailClose, true)
-  stopAutoRefresh()
 })
 
 onBeforeRouteLeave(() => {
   syncDetailHostVisible(false)
-  stopAutoRefresh()
 })
 
 // 批量操作
@@ -465,11 +779,13 @@ const handleRefreshDetail = () => {
 // 抽屉关闭
 const handleDrawerClose = () => {
   syncDetailHostVisible(false)
-  stopAutoRefresh()
 }
 </script>
 
 <style scoped lang="scss">
+.cpu-filter-bar { padding: 16px 16px 0; background: #fffdf8; border: 1px solid #ead7af; border-radius: 6px; margin-bottom: 14px; }
+.cpu-filter-bar .el-select { width: 160px; }
+
 .instance-list-page {
   padding: 16px 20px 24px;
   background: #fff7e6;

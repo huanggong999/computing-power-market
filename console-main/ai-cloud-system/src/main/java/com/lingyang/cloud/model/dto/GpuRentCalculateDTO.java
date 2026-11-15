@@ -11,4 +11,8 @@ public class GpuRentCalculateDTO {
     private Integer quantity;
     private Integer duration;
     private String couponId;
+    private String region;
+    private Boolean publicIpEnabled;
+    private String bandwidthChargeType;
+    private Integer bandwidthMbps;
 }

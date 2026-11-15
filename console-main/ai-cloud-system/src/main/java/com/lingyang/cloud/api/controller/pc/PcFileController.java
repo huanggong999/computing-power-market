@@ -266,8 +266,8 @@ public class PcFileController {
         TOSV2 tosv2 = new TOSV2ClientBuilder()
                 .build("cn-beijing",
                         "tos-cn-beijing.volces.com",
-                        System.getenv().getOrDefault("VOLC_TOS_ACCESS_KEY", ""),
-                        System.getenv().getOrDefault("VOLC_TOS_ACCESS_SECRET", ""));
+                        "AKLTNThhMGRlNjdhMzlkNDJkY2E0YmM0MzdiMWY5MzZmZTU",
+                        "WTJSalltVmpNek5oTTJGbU5Ea3hZV0V4WWpaa1kyTmtOell3T0RKaFpUUQ==");
 
         tosv2.copyObject("ai-cloud-system","https://ai-cloud-system.tos-cn-beijing.volces.com/2024/11/29/29138645cdc4436f8a598da0c2eabba8.xlsx",
 

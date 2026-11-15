@@ -110,6 +110,11 @@ let routes = [
         component: () => import('@/view/computeRent/index.vue'),
       },
       {
+        path: '/cpuPurchaseResult',
+        name: 'CpuPurchaseResult',
+        component: () => import('@/view/computeList/CpuPurchaseResult.vue'),
+      },
+      {
         path: '/networkProduct',
         name: 'networkProduct',
         component: () => import('@/view/networkProduct/index.vue'),
@@ -230,6 +235,12 @@ let routes = [
           icon: 'Monitor',
           keepAlive: true
         }
+      },
+      {
+        path: '/cloud/cpuPurchase',
+        name: 'CpuPurchase',
+        component: () => import('@/view/Cloud/CpuPurchase.vue'),
+        meta: { title: '购买CPU实例', icon: 'Monitor', hideMenu: true }
       }
     ],
   },

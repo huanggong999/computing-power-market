@@ -1,0 +1,1067 @@
+yiyunshuzi/docs/API.html<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>GPU Resource Scheduler API 接口文档</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #333;
+            background: #f5f7fa;
+            padding: 40px 0;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 50px 60px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border-radius: 8px;
+        }
+        h1 {
+            font-size: 32px;
+            color: #1a1a2e;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #4a90d9;
+            padding-bottom: 15px;
+        }
+        .meta {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            font-size: 22px;
+            color: #1a1a2e;
+            margin: 35px 0 18px 0;
+            padding-left: 12px;
+            border-left: 4px solid #4a90d9;
+        }
+        h3 {
+            font-size: 17px;
+            color: #2c3e50;
+            margin: 28px 0 12px 0;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed #ddd;
+        }
+        h4 {
+            font-size: 15px;
+            color: #34495e;
+            margin: 18px 0 10px 0;
+        }
+        p { margin-bottom: 10px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0 25px 0;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #e0e6ed;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th {
+            background: #f0f4f8;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        tr:nth-child(even) { background: #fafbfc; }
+        tr:hover { background: #f0f7ff; }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 12px;
+            color: #c7254e;
+        }
+        pre {
+            background: #1e1e2e;
+            color: #cdd6f4;
+            padding: 18px 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 12px 0 20px 0;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 12.5px;
+            line-height: 1.6;
+        }
+        pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+            font-size: 12.5px;
+        }
+        .method {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            margin-right: 8px;
+            min-width: 58px;
+            text-align: center;
+        }
+        .method-get { background: #61affe; }
+        .method-post { background: #49cc90; }
+        .method-put { background: #fca130; }
+        .method-delete { background: #f93e3e; }
+        .endpoint {
+            font-family: "Consolas", monospace;
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        .required { color: #e74c3c; font-weight: 600; }
+        .optional { color: #7f8c8d; }
+        .notice {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px 16px;
+            margin: 15px 0;
+            border-radius: 4px;
+            color: #856404;
+        }
+        .notice-danger {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 12px 16px;
+            margin: 15px 0;
+            border-radius: 4px;
+            color: #721c24;
+        }
+        .toc {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 20px 25px;
+            margin-bottom: 30px;
+        }
+        .toc h3 { margin-top: 0; border: none; }
+        .toc ul { list-style: none; padding-left: 0; }
+        .toc li { padding: 4px 0; }
+        .toc a { color: #4a90d9; text-decoration: none; }
+        .toc a:hover { text-decoration: underline; }
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(90deg, #4a90d9, transparent);
+            margin: 40px 0 30px 0;
+            border: none;
+        }
+        .auth-header {
+            background: #e8f4fd;
+            border-left: 4px solid #4a90d9;
+            padding: 12px 16px;
+            margin: 15px 0;
+            border-radius: 4px;
+            color: #1a5276;
+        }
+        @media print {
+            body { background: #fff; padding: 0; }
+            .container { box-shadow: none; padding: 30px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<h1>GPU Resource Scheduler API 接口文档</h1>
+<div class="meta">
+    版本: 2.0.0 &nbsp;|&nbsp; 基础路径: <code>http://&lt;host&gt;:8000</code> &nbsp;|&nbsp; 接口风格: RESTful + FastAPI
+</div>
+
+<div class="toc">
+    <h3>📑 目录</h3>
+    <ul>
+        <li><a href="#summary">一、总接口列表</a></li>
+        <li><a href="#auth">二、JWT 认证说明</a></li>
+        <li><a href="#common">三、通用说明</a></li>
+        <li><a href="#token-api">四、JWT 认证接口</a></li>
+        <li><a href="#pod">五、GPU Pod 管理接口</a></li>
+        <li><a href="#market">六、算力市场接口</a></li>
+        <li><a href="#instance">七、容器实例管理接口</a></li>
+        <li><a href="#billing">八、计费接口</a></li>
+        <li><a href="#files">九、代码文件说明</a></li>
+    </ul>
+</div>
+
+<h2 id="summary">一、总接口列表</h2>
+
+<h3>1. JWT 认证接口</h3>
+<table>
+<tr><th style="width:50px">序号</th><th style="width:70px">方法</th><th>路径</th><th>功能说明</th></tr>
+<tr><td>0</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/auth/token</code></td><td>租户登录获取 JWT Access Token</td></tr>
+<tr><td>0.1</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/auth/logout</code></td><td>登出并吊销当前 JWT Token</td></tr>
+<tr><td>0.2</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/auth/token-status</code></td><td>查询当前 Token 状态</td></tr>
+</table>
+
+<h3>2. GPU Pod 管理接口</h3>
+<table>
+<tr><th style="width:50px">序号</th><th style="width:70px">方法</th><th>路径</th><th>功能说明</th></tr>
+<tr><td>1</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/gpu/pod/create</code></td><td>创建 GPU Pod</td></tr>
+<tr><td>2</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/gpu/pod/{pod_name}</code></td><td>获取 Pod 状态</td></tr>
+<tr><td>3</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/gpu/pod/{pod_name}/logs</code></td><td>获取 Pod 日志</td></tr>
+<tr><td>4</td><td><span class="method method-delete">DELETE</span></td><td><code>/api/v1/gpu/pod/{pod_name}</code></td><td>删除 GPU Pod</td></tr>
+<tr><td>5</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/gpu/resources</code></td><td>获取 GPU 资源总览</td></tr>
+<tr><td>6</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/tenant/{tenant_id}/usage</code></td><td>获取租户资源使用情况</td></tr>
+<tr><td>7</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/tenant/{tenant_id}/pods</code></td><td>列出租户的所有 Pod</td></tr>
+<tr><td>8</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/gpu/models</code></td><td>获取支持的 GPU 型号列表及价格</td></tr>
+<tr><td>9</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/gpu/pricing</code></td><td>查询指定 GPU 价格</td></tr>
+<tr><td>10</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/health</code></td><td>健康检查</td></tr>
+<tr><td>11</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/debug/gpu-nodes</code></td><td>调试：查看 GPU 节点详情</td></tr>
+</table>
+
+<h3>3. 算力市场接口</h3>
+<table>
+<tr><th style="width:50px">序号</th><th style="width:70px">方法</th><th>路径</th><th>功能说明</th></tr>
+<tr><td>12</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/market/regions</code></td><td>获取地区列表</td></tr>
+<tr><td>13</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/market/gpu-categories</code></td><td>获取 GPU 专区分类</td></tr>
+<tr><td>14</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/market/gpu-models</code></td><td>获取 GPU 型号列表（含可用数量）</td></tr>
+<tr><td>15</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/market/gpu-counts</code></td><td>获取 GPU 数量选项</td></tr>
+<tr><td>16</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/market/instances</code></td><td>获取可租用实例列表</td></tr>
+<tr><td>17</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/market/instances/{id}</code></td><td>获取市场实例详情</td></tr>
+<tr><td>18</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/market/rent</code></td><td>租用实例（创建租赁）</td></tr>
+</table>
+
+<h3>4. 容器实例管理接口</h3>
+<table>
+<tr><th style="width:50px">序号</th><th style="width:70px">方法</th><th>路径</th><th>功能说明</th></tr>
+<tr><td>19</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/instances</code></td><td>获取用户实例列表</td></tr>
+<tr><td>20</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/instances/{id}</code></td><td>获取实例详情</td></tr>
+<tr><td>21</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/instances/{id}/start</code></td><td>启动实例</td></tr>
+<tr><td>22</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/instances/{id}/stop</code></td><td>停止实例（关机）</td></tr>
+<tr><td>23</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/instances/{id}/restart</code></td><td>重启实例</td></tr>
+<tr><td>24</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/instances/{id}/release</code></td><td>释放实例（删除，数据不可恢复）</td></tr>
+<tr><td>25</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/instances/{id}/reset-password</code></td><td>修改实例 SSH 密码</td></tr>
+<tr><td>26</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/instances/{id}/ssh</code></td><td>获取 SSH 登录信息</td></tr>
+<tr><td>27</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/instances/{id}/renew</code></td><td>实例续费</td></tr>
+<tr><td>28</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/instances/batch-renew</code></td><td>批量续费</td></tr>
+<tr><td>29</td><td><span class="method method-post">POST</span></td><td><code>/api/v1/instances/{id}/shutdown-schedule</code></td><td>设置/取消定时关机</td></tr>
+<tr><td>30</td><td><span class="method method-put">PUT</span></td><td><code>/api/v1/instances/{id}/name</code></td><td>修改实例显示名称</td></tr>
+<tr><td>31</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/instances/{id}/tools</code></td><td>获取实例快捷工具</td></tr>
+<tr><td>32</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/instances/{id}/monitor</code></td><td>获取实例监控数据</td></tr>
+</table>
+
+<h3>5. 计费接口</h3>
+<table>
+<tr><th style="width:50px">序号</th><th style="width:70px">方法</th><th>路径</th><th>功能说明</th></tr>
+<tr><td>33</td><td><span class="method method-get">GET</span></td><td><code>/api/v1/billing/records</code></td><td>获取租户计费记录</td></tr>
+</table>
+
+<hr class="section-divider">
+
+<h2 id="auth">二、JWT 认证说明</h2>
+
+<div class="notice-danger">
+    <strong>⚠️ 重要安全变更</strong><br>
+    本系统已全面升级为 JWT Bearer Token 认证，不再支持旧的 <code>X-Tenant-ID</code> Header 明文认证方式。
+</div>
+
+<h3>认证流程</h3>
+<p><strong>第一步</strong>：调用 <code>POST /api/v1/auth/token</code> 使用 <code>tenant_id</code> + <code>api_key</code> 换取 JWT Access Token。</p>
+<p><strong>第二步</strong>：后续所有受保护接口必须在请求头中携带：</p>
+<pre><code>Authorization: Bearer &lt;JWT_ACCESS_TOKEN&gt;</code></pre>
+<p><strong>第三步</strong>：如果请求参数或 Body 中也传了 <code>tenant_id</code> / <code>tenantId</code>，后端会<strong>强制校验</strong>其与 Token 中的 <code>tenant_id</code> 是否一致，不一致返回 <code>403 Forbidden</code>。</p>
+<div class="notice">
+    <strong>字段命名兼容</strong>：创建类接口支持前端常用 camelCase（如 <code>tenantId</code>、<code>gpuSpec</code>、<code>machineId</code>、<code>pageSize</code>），同时兼容后端 snake_case（如 <code>tenant_id</code>、<code>gpu_spec</code>、<code>machine_id</code>、<code>page_size</code>）。本文示例优先使用 camelCase。
+</div>
+
+<h3>Token 载荷示例</h3>
+<pre><code>{
+  "tenant_id": "tenant_001",
+  "tenant_name": "AI科技公司",
+  "role": "user",
+  "iat": 1716940000,
+  "exp": 1717544800,
+  "type": "access"
+}</code></pre>
+
+<h3>环境变量配置</h3>
+<table>
+<tr><th>环境变量</th><th>说明</th><th>默认值</th></tr>
+<tr><td><code>JWT_SECRET_KEY</code></td><td>JWT 签名密钥（生产环境必须修改为强随机字符串）</td><td><code>gpu-scheduler-jwt-secret-key-change-me-in-production</code></td></tr>
+<tr><td><code>JWT_ALGORITHM</code></td><td>签名算法</td><td><code>HS256</code></td></tr>
+<tr><td><code>JWT_ACCESS_TOKEN_EXPIRE_DAYS</code></td><td>Token 有效期（天）</td><td><code>7</code></td></tr>
+<tr><td><code>API_KEY</code></td><td>签发 Token 时的校验密钥（演示环境使用全局密钥）</td><td><code>demo-api-key-2024</code></td></tr>
+</table>
+
+<div class="notice">
+    <strong>💡 生产环境建议</strong>：务必修改 <code>JWT_SECRET_KEY</code> 和 <code>API_KEY</code>，使用 32 字节以上的强随机字符串。建议将 <code>API_KEY</code> 校验替换为数据库中的租户独立密码/AKSK，或对接统一认证平台（SSO/OAuth2）。
+</div>
+
+<hr class="section-divider">
+
+<h2 id="common">三、通用说明</h2>
+
+<h3>计费模式（BillingMode）</h3>
+<table>
+<tr><th>值</th><th>说明</th></tr>
+<tr><td><code>on_demand</code></td><td>按量计费</td></tr>
+<tr><td><code>hourly</code></td><td>按小时</td></tr>
+<tr><td><code>daily</code></td><td>包日</td></tr>
+<tr><td><code>weekly</code></td><td>包周</td></tr>
+<tr><td><code>monthly</code></td><td>包月</td></tr>
+<tr><td><code>yearly</code></td><td>包年</td></tr>
+</table>
+
+<h3>地区编码（Region）</h3>
+<table>
+<tr><th>编码</th><th>名称</th></tr>
+<tr><td><code>xibei-b</code></td><td>西北B区</td></tr>
+<tr><td><code>beijing-b</code></td><td>北京B区</td></tr>
+<tr><td><code>chongqing-a</code></td><td>重庆A区</td></tr>
+<tr><td><code>neimeng-b</code></td><td>内蒙B区</td></tr>
+<tr><td><code>beijing-a</code></td><td>北京A区</td></tr>
+<tr><td><code>foshan</code></td><td>佛山区</td></tr>
+</table>
+
+<h3>实例状态（InstanceStatus）</h3>
+<table>
+<tr><th>状态</th><th>说明</th></tr>
+<tr><td><code>running</code></td><td>运行中</td></tr>
+<tr><td><code>stopped</code></td><td>已停止</td></tr>
+<tr><td><code>stopping</code></td><td>停止中</td></tr>
+<tr><td><code>starting</code></td><td>启动中</td></tr>
+<tr><td><code>creating</code></td><td>创建中</td></tr>
+<tr><td><code>error</code></td><td>异常</td></tr>
+<tr><td><code>releasing</code></td><td>释放中</td></tr>
+<tr><td><code>released</code></td><td>已释放</td></tr>
+</table>
+
+<hr class="section-divider">
+
+<h2 id="token-api">四、JWT 认证接口</h2>
+
+<h3>0. 租户登录获取 JWT Token</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/auth/token</code></p>
+<p>租户通过 <code>api_key</code> 换取 JWT Access Token，用于后续所有受保护接口的认证。</p>
+
+<h4>请求参数</h4>
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>tenant_id</code></td><td>string</td><td class="required">是</td><td>租户ID</td></tr>
+<tr><td><code>tenant_name</code></td><td>string</td><td class="optional">否</td><td>租户名称（可选）</td></tr>
+<tr><td><code>api_key</code></td><td>string</td><td class="required">是</td><td>租户API密钥，用于签发Token（演示环境使用全局 <code>API_KEY</code>）</td></tr>
+</table>
+
+<h4>请求示例</h4>
+<pre><code>{
+  "tenant_id": "tenant_001",
+  "tenant_name": "AI科技公司",
+  "api_key": "demo-api-key-2024"
+}</code></pre>
+
+<h4>响应示例</h4>
+<pre><code>{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 604800,
+  "tenant_id": "tenant_001",
+  "tenant_name": "AI科技公司"
+}</code></pre>
+
+<h3>0.1 登出并吊销当前 JWT Token</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/auth/logout</code></p>
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>
+</div>
+<h4>响应示例</h4>
+<pre><code>{
+  "success": true,
+  "message": "Token 已吊销，登出成功"
+}</code></pre>
+
+<h3>0.2 查询当前 Token 状态</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/auth/token-status</code></p>
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>
+</div>
+<h4>响应示例</h4>
+<pre><code>{
+  "valid": true,
+  "tenant_id": "tenant_001",
+  "tenant_name": "AI科技公司",
+  "expires_at": "2026-06-16T12:00:00",
+  "jti": "uuid"
+}</code></pre>
+
+<hr class="section-divider">
+
+<h2 id="pod">五、GPU Pod 管理接口</h2>
+
+<h3>1. 创建 GPU Pod</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/gpu/pod/create</code></p>
+<p>创建 GPU Pod（原有接口，兼容 K8s 集群）</p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong><br>
+    请求头必须携带 <code>Authorization: Bearer &lt;JWT_ACCESS_TOKEN&gt;</code><br>
+    Body 中的 <code>tenantId</code> / <code>tenant_id</code> 必须与 Token 中的租户ID一致
+</div>
+
+<h4>请求参数</h4>
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>tenantId</code> / <code>tenant_id</code></td><td>string</td><td class="required">是</td><td>租户ID，必须与 Token 中的 tenant_id 一致</td></tr>
+<tr><td><code>tenantName</code> / <code>tenant_name</code></td><td>string</td><td class="optional">否</td><td>租户名称</td></tr>
+<tr><td><code>gpuSpec.model</code></td><td>string</td><td class="required">是</td><td>GPU型号，由前端传入，如 RTX-PRO-6000</td></tr>
+<tr><td><code>gpuSpec.count</code></td><td>int</td><td class="required">是</td><td>GPU数量，可选 1,2,3,4,5,6,7,8,10,12</td></tr>
+<tr><td><code>gpuSpec.gpuMemory</code></td><td>string</td><td class="required">是</td><td>GPU显存，如 96 GB</td></tr>
+<tr><td><code>image</code></td><td>string</td><td class="required">是</td><td>容器镜像地址</td></tr>
+<tr><td><code>region</code></td><td>string</td><td class="required">是</td><td>地区编码，由前端传入</td></tr>
+<tr><td><code>zone</code></td><td>string</td><td class="required">是</td><td>可用区，由前端传入</td></tr>
+<tr><td><code>machineId</code> / <code>machine_id</code></td><td>string</td><td class="required">是</td><td>机器ID，由前端传入</td></tr>
+<tr><td><code>gpuDriver</code> / <code>gpu_driver</code></td><td>string</td><td class="required">是</td><td>GPU驱动版本</td></tr>
+<tr><td><code>cudaVersion</code> / <code>cuda_version</code></td><td>string</td><td class="required">是</td><td>CUDA版本</td></tr>
+<tr><td><code>billing.mode</code></td><td>string</td><td class="required">是</td><td>计费模式</td></tr>
+<tr><td><code>billing.duration</code></td><td>int</td><td>条件</td><td>包日/包周/包月/包年模式时必须指定</td></tr>
+<tr><td><code>resource.cpu</code></td><td>string</td><td class="required">是</td><td>CPU核数</td></tr>
+<tr><td><code>resource.cpuModel</code></td><td>string</td><td class="required">是</td><td>CPU型号，由前端传入</td></tr>
+<tr><td><code>resource.memory</code></td><td>string</td><td class="required">是</td><td>内存</td></tr>
+<tr><td><code>resource.systemDisk</code></td><td>string</td><td class="required">是</td><td>系统盘</td></tr>
+<tr><td><code>resource.dataDisk</code></td><td>string</td><td class="required">是</td><td>数据盘</td></tr>
+<tr><td><code>resource.dataDiskExpandable</code></td><td>string</td><td class="required">是</td><td>数据盘可扩容上限</td></tr>
+<tr><td><code>pricing.unitPrice</code></td><td>float</td><td class="required">是</td><td>前端传入单价，后端只校验不写死</td></tr>
+<tr><td><code>pricing.discountUnitPrice</code></td><td>float</td><td class="required">是</td><td>前端传入折扣单价</td></tr>
+<tr><td><code>pricing.totalCost</code></td><td>float</td><td class="required">是</td><td>前端传入总价</td></tr>
+<tr><td><code>pricing.discountTotalCost</code></td><td>float</td><td class="required">是</td><td>前端传入折扣总价</td></tr>
+<tr><td><code>pricing.currency</code></td><td>string</td><td class="optional">否</td><td>币种，默认 CNY</td></tr>
+<tr><td><code>pricing.unit</code></td><td>string</td><td class="required">是</td><td>计费单位，如 小时、天、周、月、年</td></tr>
+<tr><td><code>pricing.pricePerHour</code></td><td>float</td><td class="optional">否</td><td>小时原价，实例展示字段；不传则使用 unitPrice</td></tr>
+<tr><td><code>pricing.discountPrice</code></td><td>float</td><td class="optional">否</td><td>小时折扣价，实例展示字段；不传则使用 discountUnitPrice</td></tr>
+<tr><td><code>podName</code> / <code>pod_name</code></td><td>string</td><td class="optional">否</td><td>自定义Pod名称</td></tr>
+</table>
+<div class="notice">最新代码要求 GPU 规格、CPU/磁盘规格、驱动/CUDA 和费用均由前端传入；后端不再用 Python 业务默认值补齐这些字段。</div>
+
+<h4>请求示例</h4>
+<pre><code>{
+  "tenantId": "tenant_1848278449937059811",
+  "tenantName": "AI科技公司",
+  "gpuSpec": {
+    "model": "RTX-PRO-6000",
+    "count": 1,
+    "gpuMemory": "96 GB"
+  },
+  "image": "acs-sjkuu-cn-beijing.cr.volces.com/gpu/base/pytorch:2.5.0-cuda12.4-cudnn9-devel",
+  "billing": {
+    "mode": "on_demand",
+    "duration": 1
+  },
+  "resource": {
+    "cpu": "22",
+    "cpuModel": "Xeon(R) Platinum 8470Q",
+    "memory": "110 GB",
+    "disk": "50 GB",
+    "systemDisk": "30 GB",
+    "dataDisk": "50 GB",
+    "dataDiskExpandable": "139 GB"
+  },
+  "pricing": {
+    "unitPrice": 7.97,
+    "discountUnitPrice": 5.98,
+    "totalCost": 7.97,
+    "discountTotalCost": 5.98,
+    "currency": "CNY",
+    "unit": "小时",
+    "pricePerHour": 7.97,
+    "discountPrice": 5.98
+  },
+  "podName": "ai-job-001",
+  "region": "xibei-b",
+  "zone": "C81",
+  "machineId": "fa464e9524",
+  "gpuDriver": "580.95.05",
+  "cudaVersion": "<= 13.0"
+}</code></pre>
+
+<h4>响应示例</h4>
+<pre><code>{
+  "success": true,
+  "pod_name": "ai-job-001",
+  "pod_namespace": "gpu-tenant-tenant-001",
+  "message": "GPU Pod 创建成功，分配 1 张 RTX-PRO-6000 GPU",
+  "gpu_info": {
+    "model": "RTX-PRO-6000",
+    "count": 1
+  },
+  "billing_info": {
+    "gpu_model": "RTX-PRO-6000",
+    "gpu_count": 1,
+    "billing_mode": "on_demand",
+    "unit_price": 7.97,
+    "discount_unit_price": 5.98,
+    "total_cost": 7.97,
+    "discount_total_cost": 5.98,
+    "currency": "CNY",
+    "unit": "小时"
+  }
+}</code></pre>
+
+<h3>2. 获取 Pod 状态</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/gpu/pod/{pod_name}?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>pod_name</code></td><td>path</td><td class="required">是</td><td>Pod名称</td></tr>
+<tr><td><code>tenant_id</code></td><td>query</td><td class="required">是</td><td>租户ID，必须与 Token 中的 tenant_id 一致</td></tr>
+</table>
+
+<h3>3. 获取 Pod 日志</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/gpu/pod/{pod_name}/logs?tenant_id={tenant_id}&tail_lines=100</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>pod_name</code></td><td>path</td><td class="required">是</td><td>Pod名称</td></tr>
+<tr><td><code>tenant_id</code></td><td>query</td><td class="required">是</td><td>租户ID，必须与 Token 中的 tenant_id 一致</td></tr>
+<tr><td><code>tail_lines</code></td><td>query</td><td class="optional">否</td><td>返回最后N行，默认100</td></tr>
+</table>
+
+<h3>4. 删除 GPU Pod</h3>
+<p><span class="method method-delete">DELETE</span> <code class="endpoint">/api/v1/gpu/pod/{pod_name}?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>pod_name</code></td><td>path</td><td class="required">是</td><td>Pod名称</td></tr>
+<tr><td><code>tenant_id</code></td><td>query</td><td class="required">是</td><td>租户ID，必须与 Token 中的 tenant_id 一致</td></tr>
+</table>
+
+<h3>5. 获取 GPU 资源总览</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/gpu/resources?gpu_model={gpu_model}</code></p>
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>gpu_model</code></td><td>query</td><td class="optional">否</td><td>按GPU型号筛选</td></tr>
+</table>
+
+<h3>6. 获取租户资源使用情况</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/tenant/{tenant_id}/usage</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<h3>7. 列出租户的所有 Pod</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/tenant/{tenant_id}/pods</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<h3>8. 获取支持的 GPU 型号列表及价格</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/gpu/models</code></p>
+
+<h3>9. 查询指定 GPU 价格</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/gpu/pricing?gpu_model={gpu_model}&gpu_count={gpu_count}&billing_mode={billing_mode}</code></p>
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>gpu_model</code></td><td>query</td><td class="required">是</td><td>GPU型号</td></tr>
+<tr><td><code>gpu_count</code></td><td>query</td><td class="optional">否</td><td>GPU数量，默认1</td></tr>
+<tr><td><code>billing_mode</code></td><td>query</td><td class="optional">否</td><td>指定计费模式，不填返回所有模式</td></tr>
+</table>
+
+<h3>10. 健康检查</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/health</code></p>
+
+<h3>11. 调试：查看 GPU 节点详情</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/debug/gpu-nodes</code></p>
+<div class="notice">⚠️ 建议仅限管理员访问</div>
+
+<hr class="section-divider">
+
+<h2 id="market">六、算力市场接口</h2>
+
+<h3>12. 获取地区列表</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/market/regions</code></p>
+<h4>响应示例</h4>
+<pre><code>{
+  "regions": [
+    {"code": "xibei-b", "name": "西北B区", "zones": ["C81", "D43", "A12", "B09"]},
+    {"code": "beijing-b", "name": "北京B区", "zones": ["B01", "B02", "B03"]},
+    {"code": "chongqing-a", "name": "重庆A区", "zones": ["A01", "A02"]},
+    {"code": "neimeng-b", "name": "内蒙B区", "zones": ["M01", "M02"]},
+    {"code": "beijing-a", "name": "北京A区", "zones": ["A01", "A02", "A03"]},
+    {"code": "foshan", "name": "佛山区", "zones": ["F01", "F02"]}
+  ]
+}</code></pre>
+
+<h3>13. 获取 GPU 专区分类</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/market/gpu-categories</code></p>
+
+<h3>14. 获取 GPU 型号列表</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/market/gpu-models?category={category}&region={region}</code></p>
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>category</code></td><td>query</td><td class="optional">否</td><td>专区编码，如 v100、a800</td></tr>
+<tr><td><code>region</code></td><td>query</td><td class="optional">否</td><td>地区编码，用于统计可用数量</td></tr>
+</table>
+<h4>响应示例</h4>
+<pre><code>{
+  "gpu_models": [
+    {
+      "model": "RTX-PRO-6000",
+      "name": "RTX PRO 6000",
+      "memory": "96 GB",
+      "available": 2,
+      "total": 17
+    }
+  ],
+  "total": 20
+}</code></pre>
+
+<h3>15. 获取 GPU 数量选项</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/market/gpu-counts</code></p>
+<h4>响应示例</h4>
+<pre><code>{
+  "options": [1, 2, 3, 4, 5, 6, 7, 8, 10, 12]
+}</code></pre>
+
+<h3>16. 获取可租用实例列表</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/market/instances?region={region}&gpu_model={gpu_model}&gpu_count={gpu_count}&zone={zone}</code></p>
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>region</code></td><td>query</td><td class="optional">否</td><td>地区编码</td></tr>
+<tr><td><code>gpu_model</code></td><td>query</td><td class="optional">否</td><td>GPU型号</td></tr>
+<tr><td><code>gpu_count</code></td><td>query</td><td class="optional">否</td><td>需要的GPU数量</td></tr>
+<tr><td><code>zone</code></td><td>query</td><td class="optional">否</td><td>可用区</td></tr>
+</table>
+<h4>响应示例</h4>
+<pre><code>{
+  "total": 2,
+  "instances": [
+    {
+      "id": "mi-fa464e9524",
+      "region": "xibei-b",
+      "zone": "C81",
+      "machine_id": "fa464e9524",
+      "gpu_model": "RTX-PRO-6000",
+      "gpu_memory": "96 GB",
+      "available_gpus": 1,
+      "total_gpus": 9,
+      "cpu_cores": 22,
+      "cpu_model": "Xeon(R) Platinum 8470Q",
+      "memory": "110 GB",
+      "system_disk": "30 GB",
+      "data_disk": "50 GB",
+      "data_disk_expandable": "139 GB",
+      "gpu_driver": "580.95.05",
+      "cuda_version": "<= 13.0",
+      "price_per_hour": 7.97,
+      "price_discount": 5.98,
+      "status": "available",
+      "rentable_until": "2027-10-01"
+    }
+  ]
+}</code></pre>
+
+<h3>17. 获取市场实例详情</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/market/instances/{id}</code></p>
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>id</code></td><td>path</td><td class="required">是</td><td>市场实例ID</td></tr>
+</table>
+
+<h3>18. 租用实例（创建租赁）</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/market/rent</code></p>
+<p>支持按量计费、包日、包周、包月、包年、按小时的 1卡/多卡 租赁</p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 Body 中的 <code>tenantId</code> / <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<h4>请求参数</h4>
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>tenantId</code> / <code>tenant_id</code></td><td>string</td><td class="required">是</td><td>租户ID，必须与 Token 中的 tenant_id 一致</td></tr>
+<tr><td><code>tenantName</code> / <code>tenant_name</code></td><td>string</td><td class="optional">否</td><td>租户名称</td></tr>
+<tr><td><code>instanceId</code> / <code>instance_id</code></td><td>string</td><td class="required">是</td><td>市场实例ID，用于校验市场实例是否存在和GPU库存</td></tr>
+<tr><td><code>gpuCount</code> / <code>gpu_count</code></td><td>int</td><td class="required">是</td><td>租用GPU数量</td></tr>
+<tr><td><code>image</code></td><td>string</td><td class="required">是</td><td>容器镜像</td></tr>
+<tr><td><code>billingMode</code> / <code>billing_mode</code></td><td>string</td><td class="required">是</td><td>计费模式</td></tr>
+<tr><td><code>duration</code></td><td>int</td><td>条件</td><td>包日/包周/包月/包年模式时必须指定</td></tr>
+<tr><td><code>region</code></td><td>string</td><td class="required">是</td><td>地区编码，由前端传入</td></tr>
+<tr><td><code>zone</code></td><td>string</td><td class="required">是</td><td>可用区，由前端传入</td></tr>
+<tr><td><code>machineId</code></td><td>string</td><td class="required">是</td><td>机器ID，由前端传入</td></tr>
+<tr><td><code>gpuModel</code></td><td>string</td><td class="required">是</td><td>GPU型号，由前端传入</td></tr>
+<tr><td><code>gpuMemory</code></td><td>string</td><td class="required">是</td><td>GPU显存</td></tr>
+<tr><td><code>cpuCores</code></td><td>int</td><td class="required">是</td><td>CPU核数</td></tr>
+<tr><td><code>cpuModel</code></td><td>string</td><td class="required">是</td><td>CPU型号</td></tr>
+<tr><td><code>memory</code></td><td>string</td><td class="required">是</td><td>内存</td></tr>
+<tr><td><code>systemDisk</code></td><td>string</td><td class="required">是</td><td>系统盘</td></tr>
+<tr><td><code>dataDisk</code></td><td>string</td><td class="required">是</td><td>数据盘</td></tr>
+<tr><td><code>dataDiskExpandable</code></td><td>string</td><td class="required">是</td><td>数据盘可扩容上限</td></tr>
+<tr><td><code>gpuDriver</code></td><td>string</td><td class="required">是</td><td>GPU驱动版本</td></tr>
+<tr><td><code>cudaVersion</code></td><td>string</td><td class="required">是</td><td>CUDA版本</td></tr>
+<tr><td><code>pricing</code></td><td>object</td><td class="required">是</td><td>前端传入费用对象，字段同创建 GPU Pod 的 pricing</td></tr>
+</table>
+<div class="notice">最新代码中，市场实例只用于校验实例存在和 available_gpus；创建出来的实例规格和账单费用使用前端提交的完整快照。</div>
+
+<h4>请求示例</h4>
+<pre><code>{
+  "tenantId": "tenant_1848278449937059811",
+  "tenantName": "AI科技公司",
+  "instanceId": "mi-fa464e9524",
+  "gpuCount": 1,
+  "image": "pytorch:latest",
+  "billingMode": "on_demand",
+  "duration": 1,
+  "region": "xibei-b",
+  "zone": "C81",
+  "machineId": "fa464e9524",
+  "gpuModel": "RTX-PRO-6000",
+  "gpuMemory": "96 GB",
+  "cpuCores": 22,
+  "cpuModel": "Xeon(R) Platinum 8470Q",
+  "memory": "110 GB",
+  "systemDisk": "30 GB",
+  "dataDisk": "50 GB",
+  "dataDiskExpandable": "139 GB",
+  "gpuDriver": "580.95.05",
+  "cudaVersion": "<= 13.0",
+  "pricing": {
+    "unitPrice": 7.97,
+    "discountUnitPrice": 5.98,
+    "totalCost": 7.97,
+    "discountTotalCost": 5.98,
+    "currency": "CNY",
+    "unit": "小时",
+    "pricePerHour": 7.97,
+    "discountPrice": 5.98
+  }
+}</code></pre>
+
+<h4>响应示例</h4>
+<pre><code>{
+  "success": true,
+  "instance_id": "a1b2c3d4e5f6",
+  "instance_name": "xibei-b / C81机",
+  "message": "实例租用成功，分配 1 张 RTX-PRO-6000",
+  "billing_info": {
+    "gpu_model": "RTX-PRO-6000",
+    "gpu_count": 1,
+    "billing_mode": "on_demand",
+    "unit_price": 7.97,
+    "discount_unit_price": 5.98,
+    "total_cost": 7.97,
+    "discount_total_cost": 5.98,
+    "currency": "CNY",
+    "unit": "小时"
+  }
+}</code></pre>
+
+<hr class="section-divider">
+
+<h2 id="instance">七、容器实例管理接口</h2>
+
+<h3>19. 获取用户实例列表（分页）</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/instances?tenantId={tenantId}&pageSize={pageSize}&pageNum={pageNum}&status={status}&region={region}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenantId</code> / <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>tenantId</code> / <code>tenant_id</code></td><td>query</td><td class="required">是</td><td>租户ID，必须与 Token 中的 tenant_id 一致</td></tr>
+<tr><td><code>pageNum</code> / <code>page_num</code> / <code>page</code></td><td>query</td><td class="optional">否</td><td>页码，从1开始，默认1</td></tr>
+<tr><td><code>pageSize</code> / <code>page_size</code></td><td>query</td><td class="optional">否</td><td>每页数量，默认20，范围1-100</td></tr>
+<tr><td><code>status</code></td><td>query</td><td class="optional">否</td><td>按状态筛选，如 running、stopped</td></tr>
+<tr><td><code>region</code></td><td>query</td><td class="optional">否</td><td>按地区筛选</td></tr>
+</table>
+<h4>请求示例</h4>
+<pre><code>GET /api/v1/instances?tenantId=tenant_1848278449937059811&pageSize=2&pageNum=1</code></pre>
+
+<h4>响应示例</h4>
+<pre><code>{
+  "total": 10,
+  "pageNum": 1,
+  "pageSize": 2,
+  "totalPages": 5,
+  "hasNext": true,
+  "hasPrev": false,
+  "instances": [
+    {
+      "instance_id": "a1b2c3d4e5f6",
+      "instance_name": "西北B区 / 099机",
+      "region": "xibei-b",
+      "zone": "C81",
+      "status": "running",
+      "gpu_spec": "RTX-PRO-6000 * 1卡",
+      "gpu_count": 1,
+      "cpu": "22核, Xeon(R) Platinum 8470Q",
+      "memory": "110 GB",
+      "disk": {
+        "system_disk_usage": 0.0,
+        "data_disk_usage": 0.0
+      },
+      "health": {
+        "status": "normal",
+        "cpu_usage": 0.0,
+        "memory_usage": 0.0,
+        "gpu_usage": 0.0
+      },
+      "billing_mode": "on_demand",
+      "billing_status": "余额不足24小时",
+      "release_time": "关机15天后释放",
+      "ssh_info": {
+        "command": "ssh -p 22 root@fa464e9524.xibei-b.autodl.com",
+        "password_masked": "********",
+        "host": "fa464e9524.xibei-b.autodl.com",
+        "port": 22
+      },
+      "tools": [
+        {"name": "JupyterLab", "url": "http://...:8888", "icon": "jupyter"},
+        {"name": "AutoPanel", "url": "http://...:8080", "icon": "panel"},
+        {"name": "实例监控", "url": "http://...:9090", "icon": "monitor"},
+        {"name": "自定义服务", "url": "http://...:6006", "icon": "service"}
+      ],
+      "create_time": "2026-05-26T17:00:00",
+      "expire_time": "2026-05-27T17:00:00"
+    }
+  ]
+}</code></pre>
+
+<h3>20. 获取实例详情</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/instances/{instance_id}?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>instance_id</code></td><td>path</td><td class="required">是</td><td>实例ID</td></tr>
+<tr><td><code>tenant_id</code></td><td>query</td><td class="required">是</td><td>租户ID，必须与 Token 中的 tenant_id 一致</td></tr>
+</table>
+
+<h3>21. 启动实例</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/instances/{instance_id}/start?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<h3>22. 停止实例（关机）</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/instances/{instance_id}/stop?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<h3>23. 重启实例</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/instances/{instance_id}/restart?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<h3>24. 释放实例</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/instances/{instance_id}/release?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<div class="notice">⚠️ 释放后实例数据清空且不可恢复</div>
+
+<h3>25. 修改实例 SSH 密码</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/instances/{instance_id}/reset-password?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>new_password</code></td><td>string</td><td class="required">是</td><td>新密码，长度6-32位</td></tr>
+</table>
+<h4>请求示例</h4>
+<pre><code>{
+  "new_password": "MyNewP@ssw0rd"
+}</code></pre>
+
+<h3>26. 获取 SSH 登录信息</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/instances/{instance_id}/ssh?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<h4>响应示例</h4>
+<pre><code>{
+  "instance_id": "a1b2c3d4e5f6",
+  "ssh_info": {
+    "host": "fa464e9524.xibei-b.autodl.com",
+    "port": 22,
+    "username": "root",
+    "password": "aBcD1234EfGh",
+    "command": "ssh -p 22 root@fa464e9524.xibei-b.autodl.com"
+  }
+}</code></pre>
+
+<h3>27. 实例续费</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/instances/{instance_id}/renew?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>billing_mode</code></td><td>string</td><td class="required">是</td><td>续费计费模式</td></tr>
+<tr><td><code>duration</code></td><td>int</td><td class="required">是</td><td>续费时长</td></tr>
+</table>
+<h4>请求示例</h4>
+<pre><code>{
+  "billing_mode": "monthly",
+  "duration": 1
+}</code></pre>
+
+<h3>28. 批量续费</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/instances/batch-renew?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>instance_ids</code></td><td>string[]</td><td class="required">是</td><td>实例ID列表</td></tr>
+<tr><td><code>billing_mode</code></td><td>string</td><td class="required">是</td><td>计费模式</td></tr>
+<tr><td><code>duration</code></td><td>int</td><td class="required">是</td><td>时长</td></tr>
+</table>
+<h4>请求示例</h4>
+<pre><code>{
+  "instance_ids": ["a1b2c3d4", "e5f6g7h8"],
+  "billing_mode": "monthly",
+  "duration": 1
+}</code></pre>
+
+<h3>29. 设置/取消定时关机</h3>
+<p><span class="method method-post">POST</span> <code class="endpoint">/api/v1/instances/{instance_id}/shutdown-schedule?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>shutdown_time</code></td><td>string</td><td class="optional">否</td><td>ISO格式时间，null或省略表示取消</td></tr>
+</table>
+<h4>请求示例</h4>
+<pre><code>{
+  "shutdown_time": "2026-05-27T22:00:00"
+}</code></pre>
+
+<h3>30. 修改实例显示名称</h3>
+<p><span class="method method-put">PUT</span> <code class="endpoint">/api/v1/instances/{instance_id}/name?tenant_id={tenant_id}&name={name}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>name</code></td><td>query</td><td class="required">是</td><td>新的显示名称</td></tr>
+</table>
+
+<h3>31. 获取实例快捷工具</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/instances/{instance_id}/tools?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<h4>响应示例</h4>
+<pre><code>{
+  "instance_id": "a1b2c3d4e5f6",
+  "tools": [
+    {"name": "JupyterLab", "url": "http://...:8888", "icon": "jupyter"},
+    {"name": "AutoPanel", "url": "http://...:8080", "icon": "panel"},
+    {"name": "实例监控", "url": "http://...:9090", "icon": "monitor"},
+    {"name": "自定义服务", "url": "http://...:6006", "icon": "service"}
+  ]
+}</code></pre>
+
+<h3>32. 获取实例监控数据</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/instances/{instance_id}/monitor?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<h4>响应示例</h4>
+<pre><code>{
+  "instance_id": "a1b2c3d4e5f6",
+  "health": {
+    "status": "normal",
+    "cpu_usage": 12.5,
+    "memory_usage": 34.2,
+    "gpu_usage": 67.8
+  },
+  "disk": {
+    "system_disk_usage": 15.3,
+    "data_disk_usage": 8.7
+  },
+  "timestamp": "2026-05-26T17:30:00"
+}</code></pre>
+
+<hr class="section-divider">
+
+<h2 id="billing">八、计费接口</h2>
+
+<h3>33. 获取租户计费记录</h3>
+<p><span class="method method-get">GET</span> <code class="endpoint">/api/v1/billing/records?tenant_id={tenant_id}</code></p>
+
+<div class="auth-header">
+    <strong>🔐 认证要求</strong>：请求头必须携带 <code>Authorization: Bearer &lt;token&gt;</code>，且 <code>tenant_id</code> 必须与 Token 一致
+</div>
+
+<table>
+<tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>tenant_id</code></td><td>query</td><td class="required">是</td><td>租户ID，必须与 Token 中的 tenant_id 一致</td></tr>
+</table>
+
+<hr class="section-divider">
+
+<h2 id="files">九、代码文件说明</h2>
+<table>
+<tr><th>文件</th><th>职责</th></tr>
+<tr><td><code>main.py</code></td><td>FastAPI 路由入口，聚合所有 HTTP 接口</td></tr>
+<tr><td><code>models.py</code></td><td>Pydantic 数据模型（请求/响应/枚举）</td></tr>
+<tr><td><code>auth.py</code></td><td>JWT 认证与租户资源归属校验</td></tr>
+<tr><td><code>k8s_client.py</code></td><td>Kubernetes 客户端封装（Pod/Namespace 操作）</td></tr>
+<tr><td><code>resource_manager.py</code></td><td>GPU 节点资源查询与调度</td></tr>
+<tr><td><code>scheduler.py</code></td><td>GPU 调度策略（配额/节点选择）</td></tr>
+<tr><td><code>billing.py</code></td><td>计费服务（价格计算/计费记录/续费）</td></tr>
+<tr><td><code>instance_manager.py</code></td><td>容器实例生命周期管理（状态/SSH/密码/定时关机）</td></tr>
+<tr><td><code>market_data.py</code></td><td>算力市场数据（地区/GPU型号/可租用实例）</td></tr>
+<tr><td><code>requirements.txt</code></td><td>Python 依赖包</td></tr>
+<tr><td><code>API.md</code></td><td>Markdown 接口文档</td></tr>
+<tr><td><code>API.html</code></td><td>HTML 接口文档（本文件）</td></tr>
+</table>
+
+<h3>对接说明</h3>
+<p><strong>1. 纯本地演示</strong>：当前 <code>instance_manager.py</code> 使用 JSON 文件持久化实例数据，无需连接 K8s 即可运行所有 API。</p>
+<p><strong>2. 对接真实 K8s</strong>：若需操作真实集群，<code>instance_manager.start/stop/restart</code> 可扩展调用 <code>k8s_client</code> 对 Pod 的实际操作；原有 <code>/api/v1/gpu/pod/*</code> 接口可直接使用。</p>
+<p><strong>3. SSH 远程登录</strong>：当前返回 SSH 连接信息（主机、端口、用户名、密码），如需实现真正的 WebSSH/JupyterLab 代理，可在 <code>tools</code> 中扩展代理跳转逻辑。</p>
+<p><strong>4. JWT 安全提醒</strong>：生产环境务必修改 <code>JWT_SECRET_KEY</code> 和 <code>API_KEY</code> 环境变量，使用强随机字符串，防止 Token 被伪造。建议将 <code>API_KEY</code> 校验替换为数据库中的租户独立密码/AKSK，或对接统一认证平台（SSO/OAuth2）。</p>
+
+</div>
+</body>
+</html>

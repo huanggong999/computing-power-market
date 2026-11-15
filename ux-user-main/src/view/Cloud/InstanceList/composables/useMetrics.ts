@@ -1,4 +1,4 @@
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useInstanceStore } from '@/store/modules/useInstance'
 import type { InstanceMetrics } from '@/types/instance'
 
@@ -9,8 +9,6 @@ const TIME_RANGE_MAP: Record<string, number> = {
   '7d': 7 * 24 * 60 * 60 * 1000
 }
 
-const AUTO_REFRESH_INTERVAL = 30000 // 30 seconds
-
 export function useMetrics() {
   const instanceStore = useInstanceStore()
 
@@ -18,7 +16,6 @@ export function useMetrics() {
   const loading = ref(false)
   const timeRange = ref('1h')
   const currentInstanceId = ref<string | null>(null)
-  let autoRefreshTimer: ReturnType<typeof setInterval> | null = null
 
   const timeRangeMs = computed(() => TIME_RANGE_MAP[timeRange.value] || TIME_RANGE_MAP['1h'])
 
@@ -56,34 +53,12 @@ export function useMetrics() {
     }
   }
 
-  function startAutoRefresh() {
-    stopAutoRefresh()
-    autoRefreshTimer = setInterval(() => {
-      if (currentInstanceId.value) {
-        fetchMetrics(currentInstanceId.value)
-      }
-    }, AUTO_REFRESH_INTERVAL)
-  }
-
-  function stopAutoRefresh() {
-    if (autoRefreshTimer) {
-      clearInterval(autoRefreshTimer)
-      autoRefreshTimer = null
-    }
-  }
-
-  onUnmounted(() => {
-    stopAutoRefresh()
-  })
-
   return {
     metrics,
     loading,
     timeRange,
     fetchMetrics,
     setTimeRange,
-    refreshMetrics,
-    startAutoRefresh,
-    stopAutoRefresh
+    refreshMetrics
   }
 }

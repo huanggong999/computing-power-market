@@ -72,7 +72,7 @@ const form = reactive({
   confirmPassword: ''
 })
 
-const validateConfirmPassword = (rule: any, value: string, callback: any) => {
+const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
   if (value !== form.password) {
     callback(new Error('两次输入的密码不一致'))
   } else {
@@ -80,10 +80,17 @@ const validateConfirmPassword = (rule: any, value: string, callback: any) => {
   }
 }
 
+const validatePassword = (_rule: any, value: string, callback: any) => {
+  if (!value) return callback(new Error('请输入新密码'))
+  if (value.length < 8 || value.length > 30) return callback(new Error('密码长度需为 8-30 位'))
+  const categories = [/[A-Z]/, /[a-z]/, /\d/, /[^A-Za-z0-9]/].filter(pattern => pattern.test(value)).length
+  if (categories < 2) return callback(new Error('需包含大写字母、小写字母、数字、特殊字符中的至少两类'))
+  callback()
+}
+
 const rules: FormRules = {
   password: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 8, message: '密码长度至少8位', trigger: 'blur' }
+    { validator: validatePassword, trigger: 'blur' }
   ],
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
@@ -98,7 +105,7 @@ const handleSubmit = async () => {
       loading.value = true
       try {
         await instanceStore.resetPassword(props.instance.id, form.password)
-        ElMessage.success('密码重置成功')
+        ElMessage.success('密码已重置，重启实例后生效')
         visible.value = false
         emit('success')
         // 重置表单

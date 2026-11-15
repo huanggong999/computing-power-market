@@ -23,6 +23,8 @@ public enum OrderTypeEnum {
     RENEW_PRODUCT(4, "续费网络产品订单"),
     // 升级网络产品（账户数、带宽、IP）
     UPGRADE_PRODUCT(5, "升级网络产品"),
+    // 资源变更订单预留类型，本期不启用支付流程
+    RESOURCE_RESIZE(6, "资源变更订单"),
     ;
     @EnumValue
     private final int code;

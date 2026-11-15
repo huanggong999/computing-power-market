@@ -8,6 +8,7 @@ import type {
   InstanceFilters
 } from '@/types/instance'
 import * as instanceApi from '@/api/instance'
+import { isGpuInstance } from '@/utils/instanceSource'
 
 export const useInstanceStore = defineStore('instance', () => {
   // State
@@ -49,8 +50,8 @@ export const useInstanceStore = defineStore('instance', () => {
         backendParams.status = params.filters.statuses[0]
       }
       const res = await instanceApi.getInstanceList(backendParams)
-      instanceList.value = res.data?.list || []
-      total.value = Number(res.data?.dataTotal || 0)
+      instanceList.value = (res.data?.list || []).filter(isGpuInstance)
+      total.value = instanceList.value.length
       return res
     } finally {
       loading.value = false

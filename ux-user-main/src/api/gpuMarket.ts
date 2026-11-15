@@ -52,6 +52,11 @@ export interface GpuMarketItem {
   systemDisk: string
   dataDisk: string
   expandable: string
+  /** 创建 GPU Pod 接口的容量字段别名，兼容 camelCase 与 snake_case 响应。 */
+  dataDiskExpandable?: string
+  system_disk?: string
+  data_disk?: string
+  data_disk_expandable?: string
   gpuDriver: string
   cudaVersion: string
   price: string

@@ -1,0 +1,64 @@
+/* 文字单行省略号 */
+.sle {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	word-break: break-all;
+}
+/* 文字多行省略号 */
+.mle {
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	word-break: break-all;
+}
+.fwb {
+	font-weight: bold;
+}
+
+/* 外边距、内边距全局样式 */
+@for $i from 0 through 100 {
+	.mt#{$i} {
+		margin-top: #{$i}rpx !important;
+	}
+	.mr#{$i} {
+		margin-right: #{$i}rpx !important;
+	}
+	.mb#{$i} {
+		margin-bottom: #{$i}rpx !important;
+	}
+	.ml#{$i} {
+		margin-left: #{$i}rpx !important;
+	}
+	.pt#{$i} {
+		padding-top: #{$i}rpx !important;
+	}
+	.pr#{$i} {
+		padding-right: #{$i}rpx !important;
+	}
+	.pb#{$i} {
+		padding-bottom: #{$i}rpx !important;
+	}
+	.pl#{$i} {
+		padding-left: #{$i}rpx !important;
+	}
+}
+
+// 字体大小
+@for $i from 0 through 100 {
+	.fz-#{$i} {
+		font-size: #{$i}rpx !important;
+	}
+}
+// 字体行高
+@for $i from 0 through 100 {
+	.lh-#{$i} {
+		line-height: #{$i}rpx !important;
+	}
+}
+
+@font-face {
+	font-family: "Alimama DongFangDaKai";
+	src: ("") format("woff2");
+}

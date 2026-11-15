@@ -35,6 +35,10 @@ public class InstanceResponse {
 
     private String status;
 
+    private String statusMessage;
+
+    private String origin;
+
     private GpuSpec gpuSpec;
 
     private CpuInfo cpu;

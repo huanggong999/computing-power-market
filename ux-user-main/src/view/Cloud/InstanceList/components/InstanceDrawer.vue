@@ -11,7 +11,7 @@
           <div class="hero-meta">
             <StatusTag v-if="instance" :status="instance.status" size="small" />
             <span>{{ instance?.region || instance?.regionCode || '-' }}</span>
-            <span>{{ instance?.billingType === 'hourly' ? '按量计费' : '包年包月' }}</span>
+            <span>{{ getGpuBillingLabel(instance?.billingType) }}</span>
           </div>
         </div>
         <button v-if="showClose" type="button" class="drawer-close-button" @click.stop="closePanel">关闭</button>
@@ -33,7 +33,7 @@
           </div>
           <div class="summary-item">
             <span>到期时间</span>
-            <strong>{{ instance.expiredAt || '-' }}</strong>
+            <strong>{{ instance.expireTime || instance.expiredAt || '-' }}</strong>
           </div>
         </div>
 
@@ -130,24 +130,39 @@
               <el-icon><VideoPause /></el-icon>
               关机
             </el-button>
-            <el-button type="warning" @click="handleAction('restart')">
+            <el-button type="primary" plain :disabled="isTransitional" :title="isTransitional ? '实例正在处理中，请稍后再试' : '调整实例资源'" @click="handleAction('resize')">资源管理</el-button>
+            <el-button
+              type="warning"
+              :disabled="!isRunning"
+              :title="isRunning ? '重启实例' : '仅运行中实例可重启'"
+              @click="handleAction('restart')"
+            >
               <el-icon><Refresh /></el-icon>
               重启
             </el-button>
-            <el-popconfirm
-              title="确定要释放该实例吗？释放后数据不可恢复！"
-              confirm-button-text="确定"
-              cancel-button-text="取消"
-              type="warning"
-              @confirm="handleAction('release')"
+            <el-button
+              type="primary"
+              plain
+              :disabled="instance.status !== 'running'"
+              :title="instance.status === 'running' ? '获取 SSH 连接信息' : '仅运行中实例可获取 SSH 连接信息'"
+              @click="handleAction('ssh')"
             >
-              <template #reference>
-                <el-button type="info">
+              SSH 连接
+            </el-button>
+            <el-button type="primary" plain :disabled="isTransitional" :title="isTransitional ? '实例正在处理中，请稍后再试' : '重置实例密码'" @click="handleAction('resetPassword')">重置密码</el-button>
+            <el-button type="primary" plain :disabled="isTransitional" :title="isTransitional ? '实例正在处理中，请稍后再试' : '修改实例名称'" @click="handleAction('setName')">修改名称</el-button>
+            <el-tooltip
+              :content="isTransitional ? '实例正在处理中，请稍后再试' : '释放实例'"
+              :disabled="!isTransitional"
+              placement="top"
+            >
+              <span>
+                <el-button type="info" :disabled="isTransitional" @click="handleAction('release')">
                   <el-icon><Delete /></el-icon>
                   释放
                 </el-button>
-              </template>
-            </el-popconfirm>
+              </span>
+            </el-tooltip>
           </div>
         </section>
 
@@ -176,6 +191,7 @@ import StatusTag from './StatusTag.vue'
 import MetricsPanel from './MetricsPanel.vue'
 import { useInstanceStore } from '@/store/modules/useInstance'
 import type { Instance, InstanceMetrics, SshInfo } from '@/types/instance'
+import { getGpuBillingLabel } from '@/utils/gpuBilling'
 
 interface Props {
   modelValue: boolean
@@ -203,6 +219,9 @@ const visible = computed({
   set: (val) => emit('update:modelValue', val)
 })
 
+const statusKey = computed(() => String(props.instance?.status || '').toLowerCase())
+const isRunning = computed(() => statusKey.value === 'running')
+const isTransitional = computed(() => ['creating', 'pending', 'starting', 'stopping', 'restarting', 'releasing', 'deleting'].includes(statusKey.value))
 const showPassword = ref(false)
 const sshInfo = ref<SshInfo | null>(null)
 const sshLoading = ref(false)

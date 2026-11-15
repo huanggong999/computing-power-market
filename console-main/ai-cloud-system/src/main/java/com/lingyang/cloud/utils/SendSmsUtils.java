@@ -15,9 +15,7 @@ import java.util.Map;
 
 @Slf4j
 public class SendSmsUtils {
-    private static final String ACCESS_KEY = System.getenv().getOrDefault("VOLC_SMS_ACCESS_KEY", "");
-    private static final String ACCESS_SECRET = System.getenv().getOrDefault("VOLC_SMS_ACCESS_SECRET", "");
-    private static SmsService smsService = SmsServiceImpl.getInstance(new SmsServiceInfoConfig(ACCESS_KEY, ACCESS_SECRET));
+    private static SmsService smsService = SmsServiceImpl.getInstance(new SmsServiceInfoConfig("AKLTNThhMGRlNjdhMzlkNDJkY2E0YmM0MzdiMWY5MzZmZTU", "WTJSalltVmpNek5oTTJGbU5Ea3hZV0V4WWpaa1kyTmtOell3T0RKaFpUUQ=="));
 
     public static void sendSmsRegister(String phone, String code)  {
         SmsSendRequest req = new SmsSendRequest();

@@ -105,6 +105,20 @@ public class PcGpuRentController {
         return Result.success(components.stream().map(this::toMirrorItem).toList());
     }
 
+    @GetMapping("/rent/eip-prices")
+    @Operation(summary = "查询公开公网 IP 价格")
+    @PreAuthorize("permitAll()")
+    public Result<JSONObject> eipPrices(@RequestParam String region,
+                                        @RequestParam(defaultValue = "traffic") String billingType,
+                                        @RequestParam(defaultValue = "10") Integer bandwidth) {
+        if (StringUtils.isBlank(region)) return Result.error("地域不能为空");
+        if (!"traffic".equalsIgnoreCase(billingType) && !"bandwidth".equalsIgnoreCase(billingType)) {
+            return Result.error("公网计费方式无效");
+        }
+        if (bandwidth == null || bandwidth < 1 || bandwidth > 200) return Result.error("公网带宽必须在 1-200 Mbps 之间");
+        return Result.success(gpuSchedulerApiClient.getEipPrices(region, billingType.toLowerCase(Locale.ROOT), bandwidth));
+    }
+
     @GetMapping("/mirror/{mirrorId}/versions")
     @Operation(summary = "GPU镜像版本")
     @PreAuthorize("permitAll()")
@@ -153,6 +167,8 @@ public class PcGpuRentController {
         vo.setSubtotal(subtotal);
         vo.setDiscount(BigDecimal.ZERO);
         vo.setTotal(subtotal);
+        Result<GpuRentFeeVO> eipResult = applyEipPricing(vo, dto, dto.getPodCreateRequest(), dto.getRegion(), dto.getBillingType(), duration, dto.getQuantity());
+        if (eipResult != null) return eipResult;
         return Result.success(vo);
     }
 
@@ -289,7 +305,51 @@ public class PcGpuRentController {
         vo.setSubtotal(subtotal);
         vo.setDiscount(BigDecimal.ZERO);
         vo.setTotal(subtotal);
+        Result<GpuRentFeeVO> eipResult = applyEipPricing(vo, dto, request, request.getRegion(), billingType, duration, quantity);
+        if (eipResult != null) return eipResult;
         return Result.success(vo);
+    }
+
+    /** 将公开 EIP 价目加入试算结果；流量实际使用费仍由账单按量结算。 */
+    private Result<GpuRentFeeVO> applyEipPricing(GpuRentFeeVO vo, GpuRentCalculateDTO dto,
+            GpuPodCreateRequest request, String region, String billingType, int duration, int quantity) {
+        if (!Boolean.TRUE.equals(dto.getPublicIpEnabled())) return null;
+        if (StringUtils.isBlank(region) && request != null) region = request.getRegion();
+        if (StringUtils.isBlank(region)) return Result.error("公网 IP 购买缺少地域信息");
+        String eipBillingType = "PayByBandwidth".equalsIgnoreCase(dto.getBandwidthChargeType()) ? "bandwidth" : "traffic";
+        int bandwidth = dto.getBandwidthMbps() == null || dto.getBandwidthMbps() < 1 ? 10 : dto.getBandwidthMbps();
+        JSONObject eipPricing = gpuSchedulerApiClient.getEipPrices(region, eipBillingType, bandwidth);
+        if (!Boolean.TRUE.equals(eipPricing.getBoolean("success"))) return Result.error("公网 IP 价格暂时不可用，请稍后重试");
+        if ("bandwidth".equals(eipBillingType) && !Boolean.TRUE.equals(eipPricing.getBoolean("available"))) {
+            return Result.error("当前地域暂无可用的公网带宽价格");
+        }
+        BigDecimal eipFixed = calculateEipFixedFee(eipPricing, billingType, duration, quantity);
+        BigDecimal subtotal = (vo.getSubtotal() == null ? BigDecimal.ZERO : vo.getSubtotal()).add(eipFixed);
+        vo.setSubtotal(subtotal);
+        vo.setTotal(subtotal);
+        vo.setEipPricing(eipPricing);
+        return null;
+    }
+
+    private BigDecimal calculateEipFixedFee(JSONObject pricing, String billingType, int duration, int quantity) {
+        JSONObject estimate = pricing.getJSONObject("estimate");
+        if (estimate == null) return BigDecimal.ZERO;
+        BigDecimal fixed;
+        if ("monthly".equalsIgnoreCase(billingType)) {
+            fixed = estimate.getBigDecimal("monthlyFixed");
+            if (fixed == null) fixed = BigDecimal.ZERO;
+            fixed = fixed.multiply(BigDecimal.valueOf(duration));
+        } else {
+            fixed = estimate.getBigDecimal("hourlyFixed");
+            if (fixed == null) fixed = BigDecimal.ZERO;
+            int hours = switch (billingType.toLowerCase(Locale.ROOT)) {
+                case "daily" -> duration * 24;
+                case "weekly" -> duration * 24 * 7;
+                default -> duration;
+            };
+            fixed = fixed.multiply(BigDecimal.valueOf(hours));
+        }
+        return fixed.multiply(BigDecimal.valueOf(quantity));
     }
 
     private boolean isPositive(BigDecimal value) {
@@ -467,6 +527,7 @@ public class PcGpuRentController {
         configDetail.put("podName", podName);
         configDetail.put("podNamespace", podResponse.getPodNamespace());
         configDetail.put("createMessage", podResponse.getMessage());
+        if (fee.getEipPricing() != null) configDetail.put("eipPricing", fee.getEipPricing());
         JSONObject pricingSnapshot = new JSONObject();
         pricingSnapshot.put("unit_price", unitPrice);
         pricingSnapshot.put("discount_unit_price", discountUnitPrice);

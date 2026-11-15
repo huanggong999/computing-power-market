@@ -1,0 +1,134 @@
+{
+    "id": "form-create-uni",
+    "displayName": "form-create-uni",
+    "version": "1.0.0",
+    "description": "form-create-uni端组件是根据form-create vue组件做的uni适配端组件，是一个可以通过 JSON 生成具有动态渲染、数据收集、验证和提交功能的表单生成组件。",
+    "keywords": [
+        "form-create-uni",
+        "form-create",
+        "一平软件"
+    ],
+    "repository": "",
+    "engines": {
+        "HBuilderX": "^3.1.0"
+    },
+    "dcloudext": {
+        "category": [
+            "前端组件",
+            "通用组件"
+        ]
+    },
+    "uni_modules": {
+        "dependencies": [
+            {
+                "id": "uview-plus",
+                "name": "uview-plus",
+                "displayName": "uview-plus3.0重磅发布，全面的Vue3移动组件库。",
+                "version": "3.1.41",
+                "description": "uview-plus已兼容vue3，全面的组件和便捷的工具会让您信手拈来，如鱼得水"
+            },
+            {
+                "id": "uv-ui-tools",
+                "displayName": "uv-ui-tools 工具集 全面兼容vue3+2、app、h5、小程序等多端",
+                "version": "1.1.25",
+                "description": "uv-ui-tools，集成工具库，强大的Http请求封装，清晰的文档说明，开箱即用。方便使用，可以全局使用"
+            },
+            {
+                "id": "uv-transition",
+                "displayName": "uv-transition 动画 全面兼容vue3+2、app、h5、小程序等多端",
+                "version": "1.0.8",
+                "description": "transition 该组件用于组件的动画过渡效果。"
+            },
+            {
+                "id": "uv-toolbar",
+                "displayName": "uv-toolbar 工具条",
+                "version": "1.0.0",
+                "description": "该组价是仅用于uv-ui中一个公共小工具，提供一个取消和确定的样式，可以设置标题，主要用于弹窗顶部的选择确定工具条"
+            },
+            {
+                "id": "uv-status-bar",
+                "displayName": "uv-status-bar 状态栏占位",
+                "version": "1.0.2",
+                "description": "状态栏占位组件主要用于状态填充，比如在自定导航栏的时候，它会自动适配一个恰当的状态栏高度。"
+            },
+            {
+                "id": "uv-safe-bottom",
+                "displayName": "uv-safe-bottom 底部安全区  全面兼容小程序、nvue、vue2、vue3等多端",
+                "version": "1.0.4",
+                "description": "这个适配，主要是针对IPhone X等一些底部带指示条的机型，指示条的操作区域与页面底部存在重合，容易导致用户误操作，因此我们需要针对这些机型进行底部安全区适配。"
+            },
+            {
+                "id": "uv-popup",
+                "displayName": "uv-popup 弹出层 全面兼容vue3+2、app、h5、小程序等多端",
+                "version": "1.0.7",
+                "description": "uv-popup 弹出层容器，用于展示弹窗、信息提示等内容，支持上、下、左、右和中部弹出。组件只提供容器，内部内容由用户自定义。"
+            },
+            {
+                "id": "uv-pick-color",
+                "displayName": "uv-pick-color 颜色选择器 全面兼容vue3+2、app、h5、小程序等多端",
+                "version": "1.0.8",
+                "description": "该组件为颜色选择器，支持预制颜色，初始化颜色，简单配置，开箱即用"
+            },
+            {
+                "id": "uv-overlay",
+                "displayName": "uv-overlay 遮罩层  全面兼容小程序、nvue、vue2、vue3等多端",
+                "version": "1.0.3",
+                "description": "uv-overlay 创建一个遮罩层，用于强调特定的页面元素，并阻止用户对遮罩下层的内容进行操作，一般用于弹窗场景，uv-popup、uv-toast、uv-tooltip等组件就是用了该组件。"
+            },
+            {
+                "id": "uv-icon",
+                "displayName": "uv-icon 图标 全面兼容vue3+2、app、h5、小程序等多端",
+                "version": "1.0.13",
+                "description": "基于字体的图标集，包含了大多数常见场景的图标，支持自定义，支持自定义图片图标等。可自定义颜色、大小。"
+            }
+        ],
+        "encrypt": [],
+        "platforms": {
+            "cloud": {
+                "tcb": "u",
+                "aliyun": "u",
+                "alipay": "u"
+            },
+            "client": {
+                "Vue": {
+                    "vue2": "u",
+                    "vue3": "u"
+                },
+                "App": {
+                    "app-vue": "u",
+                    "app-nvue": "u",
+                    "app-uvue": "u"
+                },
+                "H5-mobile": {
+                    "Safari": "u",
+                    "Android Browser": "u",
+                    "微信浏览器(Android)": "u",
+                    "QQ浏览器(Android)": "u"
+                },
+                "H5-pc": {
+                    "Chrome": "u",
+                    "IE": "u",
+                    "Edge": "u",
+                    "Firefox": "u",
+                    "Safari": "u"
+                },
+                "小程序": {
+                    "微信": "u",
+                    "阿里": "u",
+                    "百度": "u",
+                    "字节跳动": "u",
+                    "QQ": "u",
+                    "钉钉": "u",
+                    "快手": "u",
+                    "飞书": "u",
+                    "京东": "u"
+                },
+                "快应用": {
+                    "华为": "u",
+                    "联盟": "u"
+                }
+            }
+        }
+    },
+    "name": "form-create-uni"
+}
